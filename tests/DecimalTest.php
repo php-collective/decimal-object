@@ -397,7 +397,7 @@ class DecimalTest extends TestCase
         $this->expectException(TypeError::class);
         $this->expectExceptionMessage('Cannot cast Big Decimal to Float');
 
-        $result = $decimal->toFloat();
+        $decimal->toFloat();
     }
 
     /**
