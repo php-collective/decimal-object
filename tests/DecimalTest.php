@@ -5,12 +5,12 @@
  * For full license information, please view the LICENSE file that was distributed with this source code.
  */
 
-namespace Spryker\DecimalObject\Test;
+namespace PhpCollective\DecimalObject\Test;
 
 use DivisionByZeroError;
 use InvalidArgumentException;
+use PhpCollective\DecimalObject\Decimal;
 use PHPUnit\Framework\TestCase;
-use Spryker\DecimalObject\Decimal;
 use stdClass;
 use TypeError;
 

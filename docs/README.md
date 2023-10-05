@@ -14,7 +14,7 @@ You can create the value object from
 - float (careful)
 
 ```php
-use Spryker\DecimalObject\Decimal;
+use PhpCollective\DecimalObject\Decimal;
 
 $value = '1.234';
 $decimalObject = Decimal::create($value);

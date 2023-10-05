@@ -1,11 +1,11 @@
 #  Decimal Object
 
-[![Build Status](https://github.com/spryker/decimal-object/workflows/CI/badge.svg?branch=master)](https://github.com/spryker/decimal-object/actions?query=workflow%3ACI+branch%3Amaster)
-[![codecov](https://codecov.io/gh/spryker/decimal-object/branch/master/graph/badge.svg?token=L1thFB9nOG)](https://codecov.io/gh/spryker/decimal-object)
-[![Latest Stable Version](https://poser.pugx.org/spryker/decimal-object/v/stable.svg)](https://packagist.org/packages/spryker/decimal-object)
+[![Build Status](https://github.com/php-collective/decimal-object/workflows/CI/badge.svg?branch=master)](https://github.com/php-collective/decimal-object/actions?query=workflow%3ACI+branch%3Amaster)
+[![codecov](https://codecov.io/gh/php-collective/decimal-object/branch/master/graph/badge.svg?token=L1thFB9nOG)](https://codecov.io/gh/php-collective/decimal-object)
+[![Latest Stable Version](https://poser.pugx.org/php-collective/decimal-object/v/stable.svg)](https://packagist.org/packages/php-collective/decimal-object)
 [![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%207.3-8892BF.svg)](https://php.net/)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%208-brightgreen.svg?style=flat)](https://phpstan.org/)
-[![License](https://poser.pugx.org/spryker/decimal-object/license)](https://packagist.org/packages/spryker/decimal-object)
+[![License](https://poser.pugx.org/php-collective/decimal-object/license)](https://packagist.org/packages/php-collective/decimal-object)
 
 Decimal value object for PHP.
 
@@ -21,7 +21,7 @@ Handling them as string is a workaround, but as value object you can more easily
 
 ### Alternatives
 Solutions like https://php-decimal.io require a PHP extension (would make it faster, but also more difficult for some
-servers to be available). For details see the [wiki](https://github.com/spryker/decimal-object/wiki).
+servers to be available). For details see the [wiki](https://github.com/php-collective/decimal-object/wiki).
 
 ## Features
 
@@ -39,7 +39,7 @@ servers to be available). For details see the [wiki](https://github.com/spryker/
 
 ### Composer (preferred)
 ```
-composer require spryker/decimal-object
+composer require php-collective/decimal-object
 ```
 
 ## Usage

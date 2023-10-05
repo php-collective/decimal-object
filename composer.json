@@ -1,32 +1,36 @@
 {
-    "name": "spryker/decimal-object",
+    "name": "php-collective/decimal-object",
     "description": "PHP decimal handling as value object",
     "type": "library",
     "license": "MIT",
     "authors": [
+        {
+            "name": "The PHP Collective",
+            "homepage": "https://github.com/php-collective"
+        },
         {
             "name": "Spryker Systems GmbH",
             "homepage": "https://spryker.com"
         }
     ],
     "require": {
-        "php": ">=7.3",
+        "php": ">=8.1",
         "ext-bcmath": "*",
         "ext-json": "*"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.5.0",
+        "phpunit/phpunit": "^10.3.0",
         "spryker/code-sniffer": "@stable",
         "phpstan/phpstan": "^1.0.0"
     },
     "autoload": {
         "psr-4": {
-            "Spryker\\DecimalObject\\": "src/"
+            "PhpCollective\\DecimalObject\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Spryker\\DecimalObject\\Test\\": "tests/"
+            "PhpCollective\\DecimalObject\\Test\\": "tests/"
         }
     },
     "minimum-stability": "dev",
@@ -39,9 +43,11 @@
     "scripts": {
         "test": "phpunit",
         "test-coverage": "phpunit --log-junit tmp/coverage/unitreport.xml --coverage-html tmp/coverage --coverage-clover tmp/coverage/coverage.xml",
-        "stan": "vendor/bin/phpstan.phar analyse -c tests/phpstan.neon -l 8 src/",
-        "cs-check": "vendor/bin/phpcs --colors --standard=ruleset.xml -s -p src/ tests/",
-        "cs-fix": "vendor/bin/phpcbf --colors --standard=ruleset.xml -p src/ tests/"
+        "stan": "vendor/bin/phpstan.phar analyse",
+        "lowest": "validate-prefer-lowest",
+        "lowest-setup": "composer update --prefer-lowest --prefer-stable --prefer-dist --no-interaction && cp composer.json composer.backup && composer require --dev dereuromark/composer-prefer-lowest && mv composer.backup composer.json",
+        "cs-check": "vendor/bin/phpcs",
+        "cs-fix": "vendor/bin/phpcbf"
     },
     "config": {
         "allow-plugins": {
