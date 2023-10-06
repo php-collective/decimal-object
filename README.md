@@ -23,6 +23,8 @@ Handling them as string is a workaround, but as value object you can more easily
 Solutions like https://php-decimal.io require a PHP extension (would make it faster, but also more difficult for some
 servers to be available). For details see the [wiki](https://github.com/php-collective/decimal-object/wiki).
 
+Note: If you are looking for pre 8.1 versions, check out legacy library (https://github.com/spryker/decimal-object).
+
 ## Features
 
 - Super strict on precision/scale. Does not lose significant digits on its own. You need to `trim()` for this manually.

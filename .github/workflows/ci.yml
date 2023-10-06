@@ -32,14 +32,14 @@ jobs:
 
     - name: Run PHPUnit
       run: |
-        if [[ ${{ matrix.php-version }} == '7.3' ]]; then
+        if [[ ${{ matrix.php-version }} == '8.1' ]]; then
           vendor/bin/phpunit --coverage-clover=coverage.xml
         else
           vendor/bin/phpunit
         fi
 
     - name: Code Coverage Report
-      if: success() && matrix.php-version == '7.3'
+      if: success() && matrix.php-version == '8.1'
       uses: codecov/codecov-action@v1
 
   validation:
