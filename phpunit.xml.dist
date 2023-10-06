@@ -17,10 +17,10 @@
     </testsuites>
 
     <!-- Prevent coverage reports from looking in tests and vendors -->
-    <filter>
-        <whitelist>
+    <source>
+        <include>
             <directory suffix=".php">src/</directory>
-        </whitelist>
-    </filter>
+        </include>
+    </source>
 
 </phpunit>
