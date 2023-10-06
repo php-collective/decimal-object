@@ -1,6 +1,6 @@
 #  Decimal Object
 
-[![CI](https://github.com/php-collective/decimal-object/actions/workflows/ci.yml/badge.svg)](https://github.com/php-collective/decimal-object/actions/workflows/ci.yml)
+[![CI](https://github.com/php-collective/decimal-object/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/php-collective/decimal-object/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/php-collective/decimal-object/branch/master/graph/badge.svg?token=L1thFB9nOG)](https://codecov.io/gh/php-collective/decimal-object)
 [![Latest Stable Version](https://poser.pugx.org/php-collective/decimal-object/v/stable.svg)](https://packagist.org/packages/php-collective/decimal-object)
 [![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%208.1-8892BF.svg)](https://php.net/)
