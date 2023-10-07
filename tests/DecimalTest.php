@@ -11,7 +11,6 @@ use DivisionByZeroError;
 use InvalidArgumentException;
 use PhpCollective\DecimalObject\Decimal;
 use PHPUnit\Framework\TestCase;
-use stdClass;
 use TypeError;
 
 class DecimalTest extends TestCase
@@ -125,10 +124,8 @@ class DecimalTest extends TestCase
     {
         return [
             'invalid string' => ['xyz'],
-            'object' => [new stdClass()],
             'non-english/localized case1' => ['1018,9'],
             'non-english/localized case2' => ['1.018,9'],
-            'null' => [null],
         ];
     }
 
