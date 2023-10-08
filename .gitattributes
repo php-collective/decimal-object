@@ -18,6 +18,6 @@ compose.yaml export-ignore
 Makefile export-ignore
 
 # Remove directories for archives
-.docker export-ignore
-.github export-ignore
-tests export-ignore
+.docker/ export-ignore
+.github/ export-ignore
+tests/ export-ignore
