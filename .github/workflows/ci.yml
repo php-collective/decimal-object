@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.1', '8.2']
+        php-version: ['8.1', '8.2', '8.3']
 
     steps:
     - uses: actions/checkout@v3
@@ -26,11 +26,13 @@ jobs:
         coverage: pcov
 
     - name: Composer install
+      continue-on-error: ${{ matrix.php-version  == '8.3' }}
       run: |
         composer --version
         composer install
 
     - name: Run PHPUnit
+      continue-on-error: ${{ matrix.php-version  == '8.3' }}
       run: |
         if [[ ${{ matrix.php-version }} == '8.1' ]]; then
           vendor/bin/phpunit --coverage-clover=coverage.xml
