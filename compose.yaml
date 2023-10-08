@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+    php:
+        build:
+            context: .
+            dockerfile: .docker/Dockerfile
+            args:
+                PHP_VERSION: "${PHP_VERSION:-8.2}"
+                PHPUNIT_VERSION: "${PHPUNIT_VERSION:-10.4.0}"
+                PHPSTAN_VERSION: "${PHPSTAN_VERSION:-1.10.38}"
+        volumes:
+            - ./:/code
+        working_dir: /code
