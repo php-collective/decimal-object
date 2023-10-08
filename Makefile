@@ -16,4 +16,4 @@ cs-check:
 cs-fix:
 	@docker compose run --rm -it php composer cs-fix
 
-test: cs-check phpstan phpunit
+test: install cs-check phpstan phpunit
