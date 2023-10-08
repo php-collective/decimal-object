@@ -20,7 +20,7 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^10.3.0",
-        "spryker/code-sniffer": "@stable",
+        "php-collective/code-sniffer": "dev-master",
         "phpstan/phpstan": "^1.0.0"
     },
     "autoload": {
