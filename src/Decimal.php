@@ -10,9 +10,10 @@ namespace PhpCollective\DecimalObject;
 use DivisionByZeroError;
 use InvalidArgumentException;
 use JsonSerializable;
+use Stringable;
 use TypeError;
 
-class Decimal implements JsonSerializable
+class Decimal implements JsonSerializable, Stringable
 {
     /**
      * @var string
@@ -87,7 +88,7 @@ class Decimal implements JsonSerializable
      */
     protected function parseValue(object|string|float|int $value): string
     {
-        if (!(is_scalar($value) || method_exists($value, '__toString'))) {
+        if (!(is_scalar($value) || $value instanceof Stringable)) {
             throw new InvalidArgumentException('Invalid value');
         }
 
@@ -818,14 +819,15 @@ class Decimal implements JsonSerializable
         } else {
             $this->integralPart = bcmul($matches[2], bcpow('10', (string)$exp));
 
-            $pos = strlen((string)$this->integralPart);
+            $pos = strlen($this->integralPart);
+            $pos = strlen($this->integralPart);
             if (strpos($value, '.') !== false) {
                 $pos++;
             }
             $this->fractionalPart = rtrim(substr($value, $pos), '.');
 
             if ($scale !== null) {
-                $this->fractionalPart = str_pad($this->fractionalPart, $scale - strlen((string)$this->integralPart), '0');
+                $this->fractionalPart = str_pad($this->fractionalPart, $scale - strlen($this->integralPart), '0');
             }
         }
     }
