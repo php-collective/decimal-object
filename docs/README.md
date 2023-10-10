@@ -24,30 +24,30 @@ echo 'Value: ' . $decimalObject;
 
 It will auto-cast to string where necessary, you can force it using `(string)$decimalObject`.
 
+### Operations
+
+Transformation:
+- `sign()`: Returns int `0` if zero, `-1` if negative, or `1` if positive.
+- `toString()`: Default casting mechanism (this method is equivalent to a cast to string).
+- `toFloat()`: Returns some approximation of this Decimal as a PHP native float.
+- `toInt()`: Returns integer value (this method is equivalent to a cast to integer).
+
+These return a new object:
+- `absolute()`: Returns the absolute (positive) value of this decimal.
+- `negate()`: Returns the negation (positive if negative and vice versa).
+- `trim()`: Remove trailing zeros after the comma (same value, but different semantic meaning in term of precision/scale).
+
+There is only one static method and acts as a convenience wrapper to create an object:
+- `create()`: Internally does `new Decimal($value)`, allows for easier chaining without need of `()` wrapping.
+  Use this if your input can already be the `Decimal` object as it will then just be re-used. Constructor creation
+  builds a new object.
+
 ### Checks
 
 Boolean checks:
 - `isZero()`: If exactly `0`.
 - `isNegative()`: If < `0`.
 - `isPositive()`: If > `0` (zero itself is not included).
-
-### Operations
-
-These return a new object:
-- `sign()`: Returns int `0` if zero, `-1` if negative, or `1` if positive.
-- `absolute()`: Returns the absolute (positive) value of this decimal.
-- `negation()`: Returns the negation (positive if negative and vice versa).
-- `trim()`: Remove trailing zeros after the comma (same value, but different semantic meaning in term of precision/scale).
-
-Also:
-- `toString()`: Default casting mechanism (this method is equivalent to a cast to string).
-- `toFloat()`: Returns some approximation of this Decimal as a PHP native float.
-- `toInt()`: Returns integer value (this method is equivalent to a cast to integer).
-
-There is only one static method and acts as a convenience wrapper to create an object:
-- `create()`: Internally does `new Decimal($value)`, allows for easier chaining without need of `()` wrapping.
-  Use this if your input can already be the `Decimal` object as it will then just be re-used. Constructor creation
-  builds a new object.
 
 ### Comparison
 
