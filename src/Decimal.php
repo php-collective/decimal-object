@@ -453,9 +453,6 @@ class Decimal implements JsonSerializable, Stringable
         if ($scale === null) {
             $scale = $this->scale();
         }
-        if (version_compare(PHP_VERSION, '7.2') < 0) {
-            return new static(bcmod((string)$this, (string)$value));
-        }
 
         return new static(bcmod((string)$this, (string)$value, $scale));
     }

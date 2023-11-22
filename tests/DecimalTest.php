@@ -893,7 +893,7 @@ class DecimalTest extends TestCase
     public static function multiplicationLegacyProvider(): array
     {
         return [
-            ['0', '0', 3, version_compare(PHP_VERSION, '7.3') < 0 ? '0' : '0.000'],
+            ['0', '0', 3, '0.000'],
         ];
     }
 
