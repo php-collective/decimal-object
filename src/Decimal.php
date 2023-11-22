@@ -56,7 +56,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * decimal(10,6) => 6
      */
-    protected int $scale = 2;
+    protected int $scale = 0;
 
     /**
      * @param static|string|float|int $value
@@ -114,7 +114,7 @@ class Decimal implements JsonSerializable, Stringable
         /** @var string $value */
         $value = preg_replace(
             [
-                '/^^([\-]?)(\.)(.*)$/', // omitted leading zero
+                '/^^(-?)(\.)(.*)$/', // omitted leading zero
                 '/^0+(.)(\..*)?$/', // multiple leading zeros
                 '/^(\+(.*)|(-)(0))$/', // leading positive sign, tolerate minus zero too
             ],
@@ -612,7 +612,7 @@ class Decimal implements JsonSerializable, Stringable
             }
 
             $value = (string)$integralPart;
-            if (strpos($value, '.') === false) {
+            if (!str_contains($value, '.')) {
                 $value .= '.';
             }
             $value .= $this->fractionalPart;
@@ -621,7 +621,7 @@ class Decimal implements JsonSerializable, Stringable
             // 00002
             // 20000
             $fractionalPart = $this->fractionalPart;
-            while (substr($fractionalPart, 0, 1) === '0') {
+            while (str_starts_with($fractionalPart, '0')) {
                 $fractionalPart = substr($fractionalPart, 1);
                 $exponent--;
             }
@@ -735,7 +735,7 @@ class Decimal implements JsonSerializable, Stringable
             return;
         }
 
-        if (strpos($value, '.') !== false) {
+        if (str_contains($value, '.')) {
             $this->fromFloat($value);
 
             return;
@@ -818,7 +818,7 @@ class Decimal implements JsonSerializable, Stringable
 
             $pos = strlen($this->integralPart);
             $pos = strlen($this->integralPart);
-            if (strpos($value, '.') !== false) {
+            if (str_contains($value, '.')) {
                 $pos++;
             }
             $this->fractionalPart = rtrim(substr($value, $pos), '.');
