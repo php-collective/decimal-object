@@ -799,7 +799,6 @@ class Decimal implements JsonSerializable, Stringable
             $this->integralPart = bcmul($matches[2], bcpow('10', (string)$exp));
 
             $pos = strlen($this->integralPart);
-            $pos = strlen($this->integralPart);
             if (str_contains($value, '.')) {
                 $pos++;
             }
