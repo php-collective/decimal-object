@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * MIT License
  * For full license information, please view the LICENSE file that was distributed with this source code.
@@ -59,10 +61,10 @@ class Decimal implements JsonSerializable, Stringable
     protected int $scale = 0;
 
     /**
-     * @param static|string|float|int $value
+     * @param object|string|float|int $value
      * @param int|null $scale
      */
-    public function __construct(self|string|float|int $value, ?int $scale = null)
+    public function __construct(object|string|float|int $value, ?int $scale = null)
     {
         $value = $this->parseValue($value);
         $value = $this->normalizeValue($value);
@@ -136,12 +138,12 @@ class Decimal implements JsonSerializable, Stringable
      * Otherwise, create a new Decimal instance from the given value and return
      * it.
      *
-     * @param static|string|float|int $value
+     * @param object|string|float|int $value
      * @param int|null $scale
      *
      * @return static
      */
-    public static function create(self|string|float|int $value, ?int $scale = null): static
+    public static function create(object|string|float|int $value, ?int $scale = null): static
     {
         if ($scale === null && $value instanceof static) {
             return clone $value;
@@ -234,7 +236,7 @@ class Decimal implements JsonSerializable, Stringable
         $decimal = static::create($value);
         $scale = max($this->scale(), $decimal->scale());
 
-        return bccomp($this, $decimal, $scale);
+        return bccomp((string)$this, (string)$decimal, $scale);
     }
 
     /**
@@ -250,7 +252,7 @@ class Decimal implements JsonSerializable, Stringable
         $decimal = static::create($value);
         $scale = $this->resultScale($this, $decimal, $scale);
 
-        return new static(bcadd($this, $decimal, $scale));
+        return new static(bcadd((string)$this, (string)$decimal, $scale));
     }
 
     /**
@@ -284,7 +286,7 @@ class Decimal implements JsonSerializable, Stringable
         $decimal = static::create($value);
         $scale = $this->resultScale($this, $decimal, $scale);
 
-        return new static(bcsub($this, $decimal, $scale));
+        return new static(bcsub((string)$this, (string)$decimal, $scale));
     }
 
     /**
@@ -394,7 +396,7 @@ class Decimal implements JsonSerializable, Stringable
             $scale = $this->scale() + $decimal->scale();
         }
 
-        return new static(bcmul($this, $decimal, $scale));
+        return new static(bcmul((string)$this, (string)$decimal, $scale));
     }
 
     /**
@@ -414,7 +416,7 @@ class Decimal implements JsonSerializable, Stringable
             throw new DivisionByZeroError('Cannot divide by zero. Only Chuck Norris can!');
         }
 
-        return new static(bcdiv($this, $decimal, $scale));
+        return new static(bcdiv((string)$this, (string)$decimal, $scale));
     }
 
     /**
@@ -431,7 +433,7 @@ class Decimal implements JsonSerializable, Stringable
             $scale = $this->scale();
         }
 
-        return new static(bcpow($this, (string)$exponent, $scale));
+        return new static(bcpow((string)$this, (string)$exponent, $scale));
     }
 
     /**
@@ -447,7 +449,7 @@ class Decimal implements JsonSerializable, Stringable
             $scale = $this->scale();
         }
 
-        return new static(bcsqrt($this, $scale));
+        return new static(bcsqrt((string)$this, $scale));
     }
 
     /**
@@ -464,7 +466,7 @@ class Decimal implements JsonSerializable, Stringable
             $scale = $this->scale();
         }
 
-        return new static(bcmod($this, (string)$value, $scale));
+        return new static(bcmod((string)$this, (string)$value, $scale));
     }
 
     /**
@@ -480,16 +482,16 @@ class Decimal implements JsonSerializable, Stringable
         $e = bcpow('10', (string)$exponent);
         switch ($roundMode) {
             case static::ROUND_FLOOR:
-                $v = bcdiv(bcadd(bcmul($this, $e, 0), $this->isNegative() ? '-9' : '0'), $e, 0);
+                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-9' : '0'), $e, 0);
 
                 break;
             case static::ROUND_CEIL:
-                $v = bcdiv(bcadd(bcmul($this, $e, 0), $this->isNegative() ? '0' : '9'), $e, 0);
+                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '0' : '9'), $e, 0);
 
                 break;
             case static::ROUND_HALF_UP:
             default:
-                $v = bcdiv(bcadd(bcmul($this, $e, 0), $this->isNegative() ? '-5' : '5'), $e, $scale);
+                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-5' : '5'), $e, $scale);
         }
 
         return new static($v);

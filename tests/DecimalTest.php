@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * MIT License
  * For full license information, please view the LICENSE file that was distributed with this source code.
@@ -600,7 +602,7 @@ class DecimalTest extends TestCase
      */
     protected function assertNativeRound(string $expected, mixed $value, int $scale, int $roundMode): void
     {
-        $this->assertSame((new Decimal($expected))->trim()->toString(), (string)round($value, $scale, $roundMode));
+        $this->assertSame((new Decimal($expected))->trim()->toString(), (string)round((float)$value, $scale, $roundMode));
     }
 
     /**
@@ -649,7 +651,7 @@ class DecimalTest extends TestCase
      */
     protected function assertNativeFloor(string $expected, mixed $value): void
     {
-        $this->assertSame($expected, (string)floor($value));
+        $this->assertSame($expected, (string)floor((float)$value));
     }
 
     /**
@@ -696,7 +698,7 @@ class DecimalTest extends TestCase
      */
     protected function assertNativeCeil(string $expected, mixed $value): void
     {
-        $this->assertSame($expected, (string)ceil($value));
+        $this->assertSame($expected, (string)ceil((float)$value));
     }
 
     /**
