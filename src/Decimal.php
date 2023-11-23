@@ -1,11 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * MIT License
  * For full license information, please view the LICENSE file that was distributed with this source code.
  */
-
-declare(strict_types=1);
 
 namespace PhpCollective\DecimalObject;
 
@@ -468,11 +468,19 @@ class Decimal implements JsonSerializable, Stringable
         $exponent = $scale + 1;
 
         $e = bcpow('10', (string)$exponent);
-        $v = match ($roundMode) {
-            static::ROUND_FLOOR => bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-9' : '0'), $e, 0),
-            static::ROUND_CEIL => bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '0' : '9'), $e, 0),
-            default => bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-5' : '5'), $e, $scale),
-        };
+        switch ($roundMode) {
+            case static::ROUND_FLOOR:
+                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-9' : '0'), $e, 0);
+
+                break;
+            case static::ROUND_CEIL:
+                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '0' : '9'), $e, 0);
+
+                break;
+            case static::ROUND_HALF_UP:
+            default:
+                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-5' : '5'), $e, $scale);
+        }
 
         return new static($v);
     }
