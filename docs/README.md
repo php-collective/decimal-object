@@ -11,7 +11,8 @@ The value objects are immutable, always assign them when running modifications o
 You can create the value object from
 - string
 - integer
-- float (careful)
+- float
+- object that implements Stringable (and numeric `toString()` method)
 
 ```php
 use PhpCollective\DecimalObject\Decimal;
