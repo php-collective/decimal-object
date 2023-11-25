@@ -80,6 +80,20 @@ $decimalAdded = $decimalOne->add($decimalTwo); // Now '3.3'
 
 Note that due to immutability `$decimalOne` is not modified here. The re-assignment is necessary for the operation to persist.
 
+### Precision/Scale
+Operations like `add()` use the higher of the scales of the operands.
+If both are the same, they would also stay the same.
+
+With other operations like `multiply()`, they scale would be the addition of both operands' scale:
+```php
+$decimalOne = Decimal::create('1.55');
+$decimalTwo = Decimal::create('2.00');
+
+echo $decimalOne->multiply($decimalTwo); // Prints '3.1000'
+
+// Keeping 2 digit scale requires a 2nd argument
+echo $decimalOne->multiply($decimalTwo, 2); // Prints '3.10'
+```
 
 ## Contributing
 
