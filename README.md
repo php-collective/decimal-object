@@ -48,7 +48,13 @@ composer require php-collective/decimal-object
 
 See [Documentation](/docs) for more details.
 
-### Implementations
+## Implementations
 The following libraries are using the `Decimal` value object:
 
 - [dereuromark/cakephp-decimal](https://github.com/dereuromark/cakephp-decimal) as decimal type replacement for CakePHP ORM.
+
+The original library here was written 2019 for [Spryker](https://spryker.com/) ecommerce framework
+and since then battle-tested through millions of customers and orders as well as other complex calculations under the hood.
+This here is the freshly upgraded and independently maintained version for the PHP ecosystem as a whole.
+
+Enjoy!
