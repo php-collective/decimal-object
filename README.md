@@ -20,8 +20,10 @@ var_dump(0.1 + 0.2 - 0.3);  // float(5.5511151231258E-17)
 Handling them as string is a workaround, but as value object you can more easily encapsulate some of the logic.
 
 ### Alternatives
-Solutions like https://php-decimal.io require a PHP extension (would make it faster, but also more difficult for some
+Solutions like [php-decimal](https://php-decimal.github.io/#introduction) require a PHP extension (would make it faster, but also more difficult for some
 servers to be available). For details see the [wiki](https://github.com/php-collective/decimal-object/wiki).
+
+For monetary values itself one could look into [brick/money](https://github.com/brick/money) or [moneyphp/money](https://github.com/moneyphp/money).
 
 Note: If you are looking for pre 8.1 versions, check out legacy library (https://github.com/spryker/decimal-object).
 
