@@ -1,8 +1,8 @@
 {
     "name": "php-collective/decimal-object",
     "description": "PHP decimal handling as value object",
-    "type": "library",
     "license": "MIT",
+    "type": "library",
     "authors": [
         {
             "name": "The PHP Collective",
@@ -19,10 +19,12 @@
         "ext-json": "*"
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.3.0",
         "php-collective/code-sniffer": "^0.2.1",
-        "phpstan/phpstan": "^1.0.0"
+        "phpstan/phpstan": "^1.0.0",
+        "phpunit/phpunit": "^10.3.0"
     },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "PhpCollective\\DecimalObject\\": "src/"
@@ -33,25 +35,23 @@
             "PhpCollective\\DecimalObject\\Test\\": "tests/"
         }
     },
-    "minimum-stability": "stable",
-    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
     "extra": {
         "branch-alias": {
             "dev-master": "1.x-dev"
         }
     },
     "scripts": {
-        "test": "phpunit",
-        "test-coverage": "phpunit --log-junit tmp/coverage/unitreport.xml --coverage-html tmp/coverage --coverage-clover tmp/coverage/coverage.xml",
-        "stan": "phpstan analyse",
+        "cs-check": "vendor/bin/phpcs",
+        "cs-fix": "vendor/bin/phpcbf",
         "lowest": "validate-prefer-lowest",
         "lowest-setup": "composer update --prefer-lowest --prefer-stable --prefer-dist --no-interaction && cp composer.json composer.backup && composer require --dev dereuromark/composer-prefer-lowest && mv composer.backup composer.json",
-        "cs-check": "vendor/bin/phpcs",
-        "cs-fix": "vendor/bin/phpcbf"
-    },
-    "config": {
-        "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
-        }
+        "stan": "phpstan analyse",
+        "test": "phpunit",
+        "test-coverage": "phpunit --log-junit tmp/coverage/unitreport.xml --coverage-html tmp/coverage --coverage-clover tmp/coverage/coverage.xml"
     }
 }
