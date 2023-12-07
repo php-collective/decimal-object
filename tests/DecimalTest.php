@@ -13,7 +13,6 @@ use DivisionByZeroError;
 use InvalidArgumentException;
 use PhpCollective\DecimalObject\Decimal;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Stringable;
 use TypeError;
 
