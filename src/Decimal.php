@@ -62,7 +62,7 @@ class Decimal implements JsonSerializable, Stringable
 
     /**
      * @param object|string|float|int $value
-     * @param int|null $scale
+     * @param int|null $scale Leave empty to auto-detect.
      */
     public function __construct(object|string|float|int $value, ?int $scale = null)
     {
@@ -143,7 +143,7 @@ class Decimal implements JsonSerializable, Stringable
      * it.
      *
      * @param object|string|float|int $value
-     * @param int|null $scale
+     * @param int|null $scale Leave empty to auto-detect.
      *
      * @return static
      */
@@ -247,7 +247,7 @@ class Decimal implements JsonSerializable, Stringable
      * Add $value to this Decimal and return the sum as a new Decimal.
      *
      * @param static|string|float|int $value
-     * @param int|null $scale
+     * @param int|null $scale Leave empty to auto-detect.
      *
      * @return static
      */
@@ -281,7 +281,7 @@ class Decimal implements JsonSerializable, Stringable
      * Decimal.
      *
      * @param static|string|float|int $value
-     * @param int|null $scale
+     * @param int|null $scale Leave empty to auto-detect.
      *
      * @return static
      */
@@ -389,7 +389,7 @@ class Decimal implements JsonSerializable, Stringable
      * Multiply this Decimal by $value and return the product as a new Decimal.
      *
      * @param static|string|float|int $value
-     * @param int|null $scale
+     * @param int|null $scale Leave empty to auto-detect.
      *
      * @return static
      */
@@ -427,7 +427,7 @@ class Decimal implements JsonSerializable, Stringable
      * This method is equivalent to the ** operator.
      *
      * @param static|string|int $exponent
-     * @param int|null $scale
+     * @param int|null $scale Leave empty to use current.
      *
      * @return static
      */
@@ -443,7 +443,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Returns the square root of this decimal, with the same scale as this decimal.
      *
-     * @param int|null $scale
+     * @param int|null $scale Leave empty to use current.
      *
      * @return static
      */
@@ -460,7 +460,7 @@ class Decimal implements JsonSerializable, Stringable
      * This method is equivalent to the % operator.
      *
      * @param static|string|int $value
-     * @param int|null $scale
+     * @param int|null $scale Leave empty to use current.
      *
      * @return static
      */
