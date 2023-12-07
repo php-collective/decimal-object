@@ -10,7 +10,7 @@
 Decimal value object for PHP.
 
 ## Background
-When working with monetary values, normal data types like int or float are not suitable for exact arithmetic.
+When working with decimal (e.g. monetary) values, normal data types like int or float are not suitable for exact arithmetic.
 Try out the following in PHP:
 ```php
 var_dump(0.1 + 0.2);        // float(0.3)
