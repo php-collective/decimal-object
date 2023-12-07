@@ -13,6 +13,8 @@ use DivisionByZeroError;
 use InvalidArgumentException;
 use PhpCollective\DecimalObject\Decimal;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use Stringable;
 use TypeError;
 
 class DecimalTest extends TestCase
@@ -59,11 +61,43 @@ class DecimalTest extends TestCase
     }
 
     /**
+     * @return void
+     */
+    public function testCreateInvalidObject(): void
+    {
+        $objectStringable = new class implements Stringable
+        {
+            /**
+             * @return string
+             */
+            public function __toString(): string
+            {
+                return 'foo';
+            }
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+
+        Decimal::create($objectStringable);
+    }
+
+    /**
      * @return array
      */
     public static function baseProvider(): array
     {
         $objectWithToStringMethod = new class
+        {
+            /**
+             * @return string
+             */
+            public function __toString(): string
+            {
+                return '12.12';
+            }
+        };
+
+        $objectStringable = new class implements Stringable
         {
             /**
              * @return string
@@ -102,6 +136,7 @@ class DecimalTest extends TestCase
             ['622000000000000000000000', '622000000000000000000000'],
             ['3.11e2', '311'],
             [$objectWithToStringMethod, '12.12'],
+            [$objectStringable, '12.12'],
         ];
     }
 

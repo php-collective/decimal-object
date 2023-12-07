@@ -94,6 +94,10 @@ class Decimal implements JsonSerializable, Stringable
             throw new InvalidArgumentException('Invalid value');
         }
 
+        if ($value instanceof Stringable) {
+            $value = (string)$value;
+        }
+
         if (is_string($value) && !is_numeric(trim($value))) {
             throw new InvalidArgumentException('Invalid non numeric value');
         }
