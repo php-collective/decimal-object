@@ -56,13 +56,15 @@ class Decimal implements JsonSerializable, Stringable
     protected bool $negative = false;
 
     /**
+     * Decimal places to be applied to results
+     *
      * decimal(10,6) => 6
      */
     protected int $scale = 0;
 
     /**
      * @param object|string|float|int $value
-     * @param int|null $scale Leave empty to auto-detect.
+     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      */
     public function __construct(object|string|float|int $value, ?int $scale = null)
     {
@@ -143,7 +145,7 @@ class Decimal implements JsonSerializable, Stringable
      * it.
      *
      * @param object|string|float|int $value
-     * @param int|null $scale Leave empty to auto-detect.
+     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
@@ -247,7 +249,7 @@ class Decimal implements JsonSerializable, Stringable
      * Add $value to this Decimal and return the sum as a new Decimal.
      *
      * @param static|string|float|int $value
-     * @param int|null $scale Leave empty to auto-detect.
+     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
@@ -281,7 +283,7 @@ class Decimal implements JsonSerializable, Stringable
      * Decimal.
      *
      * @param static|string|float|int $value
-     * @param int|null $scale Leave empty to auto-detect.
+     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
@@ -389,7 +391,7 @@ class Decimal implements JsonSerializable, Stringable
      * Multiply this Decimal by $value and return the product as a new Decimal.
      *
      * @param static|string|float|int $value
-     * @param int|null $scale Leave empty to auto-detect.
+     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
@@ -407,7 +409,7 @@ class Decimal implements JsonSerializable, Stringable
      * Divide this Decimal by $value and return the quotient as a new Decimal.
      *
      * @param static|string|float|int $value
-     * @param int $scale
+     * @param int $scale Decimal places in the result
      *
      * @throws \DivisionByZeroError if $value is zero.
      *
@@ -427,7 +429,7 @@ class Decimal implements JsonSerializable, Stringable
      * This method is equivalent to the ** operator.
      *
      * @param static|string|int $exponent
-     * @param int|null $scale Leave empty to use current.
+     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
@@ -443,7 +445,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Returns the square root of this decimal, with the same scale as this decimal.
      *
-     * @param int|null $scale Leave empty to use current.
+     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
@@ -460,7 +462,7 @@ class Decimal implements JsonSerializable, Stringable
      * This method is equivalent to the % operator.
      *
      * @param static|string|int $value
-     * @param int|null $scale Leave empty to use current.
+     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
@@ -474,7 +476,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param int $scale
+     * @param int $scale Decimal places in the result (only used with mode "half up")
      * @param int $roundMode
      *
      * @return static
@@ -524,7 +526,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * The result of discarding all digits behind the defined scale.
      *
-     * @param int $scale
+     * @param int $scale Decimal places in the result
      *
      * @throws \InvalidArgumentException
      *
