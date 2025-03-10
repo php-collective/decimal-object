@@ -20,8 +20,8 @@
     },
     "require-dev": {
         "php-collective/code-sniffer": "^0.2.1",
-        "phpstan/phpstan": "^1.0.0",
-        "phpunit/phpunit": "^10.3.0"
+        "phpstan/phpstan": "^2.0.0",
+        "phpunit/phpunit": "^11.0.0"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

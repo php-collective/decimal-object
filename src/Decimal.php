@@ -200,7 +200,7 @@ class Decimal implements JsonSerializable, Stringable
      */
     public function greaterThanOrEquals(self|string|float|int $value): bool
     {
-        return ($this->compareTo($value) >= 0);
+        return $this->compareTo($value) >= 0;
     }
 
     /**
@@ -222,7 +222,7 @@ class Decimal implements JsonSerializable, Stringable
      */
     public function lessThanOrEquals(self|string|float|int $value): bool
     {
-        return ($this->compareTo($value) <= 0);
+        return $this->compareTo($value) <= 0;
     }
 
     /**
