@@ -485,22 +485,44 @@ class Decimal implements JsonSerializable, Stringable
     {
         $exponent = $scale + 1;
 
-        $e = bcpow('10', (string)$exponent);
         switch ($roundMode) {
             case static::ROUND_FLOOR:
-                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-9' : '0'), $e, 0);
+                $stringValue = (string)$this;
 
-                break;
+                // If already an integer, return as is
+                if (!str_contains($stringValue, '.')) {
+                    return new static($stringValue, $scale);
+                }
+
+                // For positive values, truncate the decimal part (round down)
+                if (!$this->isNegative()) {
+                    return new static(bcsub($stringValue, bcmod($stringValue, '1'), 0), $scale);
+                }
+
+                // For negative values, round down away from zero
+                return new static(bcsub($stringValue, '1', 0), $scale);
             case static::ROUND_CEIL:
-                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '0' : '9'), $e, 0);
+                $stringValue = (string)$this;
 
-                break;
+                // If already an integer, return as is
+                if (!str_contains($stringValue, '.')) {
+                    return new static($stringValue, $scale);
+                }
+
+                // If negative, truncate (remove decimals without adding 1)
+                if ($this->isNegative()) {
+                    return new static(bcsub($stringValue, '0', 0), $scale);
+                }
+
+                // Otherwise, round up for positive numbers
+                return new static(bcadd($stringValue, '1', 0), $scale);
             case static::ROUND_HALF_UP:
             default:
+                $e = bcpow('10', (string)$exponent);
                 $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-5' : '5'), $e, $scale);
         }
 
-        return new static($v);
+        return new static($v, $scale);
     }
 
     /**

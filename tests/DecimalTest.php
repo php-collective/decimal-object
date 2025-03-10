@@ -636,7 +636,12 @@ class DecimalTest extends TestCase
      */
     protected function assertNativeRound(string $expected, mixed $value, int $scale, int $roundMode): void
     {
-        $this->assertSame((new Decimal($expected))->trim()->toString(), (string)round((float)$value, $scale, $roundMode));
+        $value = (string)round((float)$value, $scale, $roundMode);
+        if ($value === '-0') {
+            $value = '0';
+        }
+
+        $this->assertSame((new Decimal($expected))->trim()->toString(), $value);
     }
 
     /**
@@ -659,6 +664,10 @@ class DecimalTest extends TestCase
             [13.4999, 0, '13'],
             [13.4999, 10, '13.4999000000'],
             [13.4999, 2, '13.50'],
+            [0.0001, 0, '0'],
+            [-0.0001, 0, '0'],
+            [0.9999, 0, '1'],
+            [-0.9999, 0, '-1'],
         ];
     }
 
@@ -685,7 +694,12 @@ class DecimalTest extends TestCase
      */
     protected function assertNativeFloor(string $expected, mixed $value): void
     {
-        $this->assertSame($expected, (string)floor((float)$value));
+        $value = (string)floor((float)$value);
+        if ($value === '-0') {
+            $value = '0';
+        }
+
+        $this->assertSame($expected, $value);
     }
 
     /**
@@ -706,6 +720,8 @@ class DecimalTest extends TestCase
             ['13.6999', '13'],
             ['13.1', '13'],
             ['13.9', '13'],
+            [0.0001, '0'],
+            [-0.0001, '-1'],
         ];
     }
 
@@ -732,7 +748,11 @@ class DecimalTest extends TestCase
      */
     protected function assertNativeCeil(string $expected, mixed $value): void
     {
-        $this->assertSame($expected, (string)ceil((float)$value));
+        $value = (string)ceil((float)$value);
+        if ($value === '-0') {
+            $value = '0';
+        }
+        $this->assertSame($expected, $value);
     }
 
     /**
@@ -753,6 +773,8 @@ class DecimalTest extends TestCase
             ['13.6999', '14'],
             ['13.1', '14'],
             ['13.9', '14'],
+            [0.0001, '1'],
+            [-0.0001, '0'],
         ];
     }
 
