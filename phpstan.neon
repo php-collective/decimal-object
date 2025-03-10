@@ -5,4 +5,4 @@ parameters:
     ignoreErrors:
         - identifier: missingType.iterableValue
         - '#Unsafe usage of new static\(\).#'
-        - '#expects numeric-string, string given.#'
+        - '#expects numeric-string, .*string given.#'
