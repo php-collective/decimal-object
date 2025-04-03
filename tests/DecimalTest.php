@@ -1036,16 +1036,16 @@ class DecimalTest extends TestCase
      */
     public function testPrecisionLossProtection(): void
     {
-        $a = Decimal::create('0.1', 50);
+        $a = Decimal::create('0.1', 50, true);
         $this->assertSame(50, $a->scale());
 
-        $b = Decimal::create($a);
+        $b = Decimal::create($a, null, true);
         $this->assertSame(50, $b->scale());
 
-        $c = Decimal::create($b, 6); // Not 50 if manually overwritten
+        $c = Decimal::create($b, 6, true); // Not 50 if manually overwritten
         $this->assertSame(6, $c->scale());
 
-        $d = Decimal::create($c, 64);
+        $d = Decimal::create($c, 64, true);
         $this->assertSame(64, $d->scale());
     }
 
@@ -1057,6 +1057,6 @@ class DecimalTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Loss of precision detected');
 
-        Decimal::create('0.123', 2);
+        Decimal::create('0.123', 2, true);
     }
 }

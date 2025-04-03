@@ -65,14 +65,15 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * @param object|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
+     * @param bool $strict If scale should be strictly checked to avoid accidental precision loss.
      */
-    public function __construct(object|string|float|int $value, ?int $scale = null)
+    public function __construct(object|string|float|int $value, ?int $scale = null, bool $strict = false)
     {
         $value = $this->parseValue($value);
         $value = $this->normalizeValue($value);
 
         $this->setValue($value, $scale);
-        $this->setScale($scale);
+        $this->setScale($scale, $strict);
     }
 
     /**
@@ -146,16 +147,17 @@ class Decimal implements JsonSerializable, Stringable
      *
      * @param object|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
+     * @param bool $strict If scale should be strictly checked to avoid accidental precision loss.
      *
      * @return static
      */
-    public static function create(object|string|float|int $value, ?int $scale = null): static
+    public static function create(object|string|float|int $value, ?int $scale = null, bool $strict = false): static
     {
         if ($scale === null && $value instanceof static) {
             return clone $value;
         }
 
-        return new static($value, $scale);
+        return new static($value, $scale, $strict);
     }
 
     /**
@@ -737,7 +739,7 @@ class Decimal implements JsonSerializable, Stringable
         }
         if ($decimalPart !== null) {
             $clone->fractionalPart = $decimalPart;
-            $clone->setScale(null);
+            $clone->setScale(null, false);
         }
         if ($negative !== null) {
             $clone->negative = $negative;
@@ -860,15 +862,16 @@ class Decimal implements JsonSerializable, Stringable
 
     /**
      * @param int|null $scale
+     * @param bool $strict
      *
      * @throws \InvalidArgumentException
      *
      * @return void
      */
-    protected function setScale(?int $scale): void
+    protected function setScale(?int $scale, bool $strict): void
     {
         $calculatedScale = strlen($this->fractionalPart);
-        if ($scale && $calculatedScale > $scale) {
+        if ($strict && $scale && $calculatedScale > $scale) {
             throw new InvalidArgumentException('Loss of precision detected. Detected scale `' . $calculatedScale . '` > `' . $scale . '` as defined.');
         }
 
