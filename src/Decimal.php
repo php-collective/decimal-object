@@ -871,8 +871,12 @@ class Decimal implements JsonSerializable, Stringable
     protected function setScale(?int $scale, bool $strict): void
     {
         $calculatedScale = strlen($this->fractionalPart);
-        if ($strict && $scale && $calculatedScale > $scale) {
-            throw new InvalidArgumentException('Loss of precision detected. Detected scale `' . $calculatedScale . '` > `' . $scale . '` as defined.');
+        if ($scale && $calculatedScale > $scale) {
+            if ($strict) {
+                throw new InvalidArgumentException('Loss of precision detected. Detected scale `' . $calculatedScale . '` > `' . $scale . '` as defined.');
+            }
+
+            $this->fractionalPart = substr($this->fractionalPart, 0, $scale);
         }
 
         $this->scale = $scale ?? $calculatedScale;

@@ -1034,6 +1034,18 @@ class DecimalTest extends TestCase
     /**
      * @return void
      */
+    public function testPrecisionLoss(): void
+    {
+        $a = Decimal::create('0.123456789', 10);
+        $this->assertSame('0.123456789', (string)$a);
+
+        $b = Decimal::create((string)$a, 8);
+        $this->assertSame('0.12345678', (string)$b);
+    }
+
+    /**
+     * @return void
+     */
     public function testPrecisionLossProtection(): void
     {
         $a = Decimal::create('0.1', 50, true);
