@@ -19,13 +19,12 @@ use TypeError;
 class DecimalTest extends TestCase
 {
     /**
-     * @dataProvider baseProvider
-     *
      * @param mixed $value
      * @param string $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('baseProvider')]
     public function testNewObject(mixed $value, string $expected): void
     {
         $decimal = new Decimal($value);
@@ -46,13 +45,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider baseProvider
-     *
      * @param mixed $value
      * @param string $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('baseProvider')]
     public function testCreate(mixed $value, string $expected): void
     {
         $decimal = Decimal::create($value);
@@ -140,12 +138,11 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider invalidValuesProvider
-     *
      * @param mixed $value
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidValuesProvider')]
     public function testNewObjectWithInvalidValueThrowsException(mixed $value): void
     {
         $this->expectException(InvalidArgumentException::class);
@@ -166,14 +163,13 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider truncateProvider
-     *
      * @param mixed $input
      * @param int $scale
      * @param string $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('truncateProvider')]
     public function testTruncate(mixed $input, int $scale, string $expected): void
     {
         $decimal = Decimal::create($input);
@@ -196,13 +192,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider integerProvider
-     *
      * @param mixed $value
      * @param bool $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('integerProvider')]
     public function testIsInteger(mixed $value, bool $expected): void
     {
         $decimal = Decimal::create($value);
@@ -229,13 +224,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider zeroProvider
-     *
      * @param mixed $value
      * @param bool $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('zeroProvider')]
     public function testIsZero(mixed $value, bool $expected): void
     {
         $decimal = Decimal::create($value);
@@ -261,13 +255,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider compareZeroProvider
-     *
      * @param mixed $input
      * @param int $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('compareZeroProvider')]
     public function testIsPositive(mixed $input, int $expected): void
     {
         $decimal = Decimal::create($input);
@@ -275,13 +268,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider compareZeroProvider
-     *
      * @param mixed $input
      * @param int $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('compareZeroProvider')]
     public function testIsNegative(mixed $input, int $expected): void
     {
         $decimal = Decimal::create($input);
@@ -310,13 +302,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider scaleProvider
-     *
      * @param mixed $input
      * @param int $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('scaleProvider')]
     public function testScale(mixed $input, int $expected): void
     {
         $decimal = Decimal::create($input);
@@ -342,13 +333,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider scientificProvider
-     *
      * @param mixed $value
      * @param string $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('scientificProvider')]
     public function testToScientific(mixed $value, string $expected): void
     {
         $decimal = Decimal::create($value);
@@ -417,12 +407,11 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider bigFloatDataProvider
-     *
      * @param string $value
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('bigFloatDataProvider')]
     public function testToFloatForBigDecimalThrowsAnException(string $value): void
     {
         $decimal = Decimal::create($value);
@@ -457,12 +446,11 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider bigIntDataProvider
-     *
      * @param string $value
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('bigIntDataProvider')]
     public function testToIntForBigIntThrowsAnException(string $value): void
     {
         $decimal = Decimal::create($value);
@@ -611,14 +599,13 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider roundProvider
-     *
      * @param mixed $value
      * @param int $scale
      * @param string $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('roundProvider')]
     public function testRound(mixed $value, int $scale, string $expected): void
     {
         $decimal = Decimal::create($value);
@@ -672,13 +659,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider floorProvider
-     *
      * @param mixed $value
      * @param string $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('floorProvider')]
     public function testFloor(mixed $value, string $expected): void
     {
         $decimal = Decimal::create($value);
@@ -726,13 +712,12 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider ceilProvider
-     *
      * @param mixed $value
      * @param string $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('ceilProvider')]
     public function testCeil(mixed $value, string $expected): void
     {
         $decimal = Decimal::create($value);
@@ -779,14 +764,13 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider compareProvider
-     *
      * @param mixed $a
      * @param mixed $b
      * @param int $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('compareProvider')]
     public function testGreaterThan(mixed $a, mixed $b, int $expected): void
     {
         $decimal = Decimal::create($a);
@@ -794,14 +778,13 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider compareProvider
-     *
      * @param mixed $a
      * @param mixed $b
      * @param int $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('compareProvider')]
     public function testLessThan(mixed $a, mixed $b, int $expected): void
     {
         $decimal = Decimal::create($a);
@@ -809,14 +792,13 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider compareProvider
-     *
      * @param mixed $a
      * @param mixed $b
      * @param int $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('compareProvider')]
     public function testGreaterEquals(mixed $a, mixed $b, int $expected): void
     {
         $decimal = Decimal::create($a);
@@ -824,14 +806,13 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider compareProvider
-     *
      * @param mixed $a
      * @param mixed $b
      * @param int $expected
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('compareProvider')]
     public function testLessEquals(mixed $a, mixed $b, int $expected): void
     {
         $decimal = Decimal::create($a);
@@ -888,8 +869,6 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider multiplicationProvider
-     *
      * @param mixed $a
      * @param mixed $b
      * @param int|null $scale
@@ -897,6 +876,7 @@ class DecimalTest extends TestCase
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('multiplicationProvider')]
     public function testMultiply(mixed $a, mixed $b, ?int $scale, string $expected): void
     {
         $decimal = Decimal::create($a);
@@ -928,8 +908,6 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider multiplicationLegacyProvider
-     *
      * @param mixed $a
      * @param mixed $b
      * @param int|null $scale
@@ -937,6 +915,7 @@ class DecimalTest extends TestCase
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('multiplicationLegacyProvider')]
     public function testMultiplyLegacy(mixed $a, mixed $b, ?int $scale, string $expected): void
     {
         $decimal = Decimal::create($a);
@@ -954,8 +933,6 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @dataProvider divisionProvider
-     *
      * @param mixed $a
      * @param mixed $b
      * @param int $scale
@@ -963,6 +940,7 @@ class DecimalTest extends TestCase
      *
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('divisionProvider')]
     public function testDivide(mixed $a, mixed $b, int $scale, string $expected): void
     {
         $decimal = Decimal::create($a);
