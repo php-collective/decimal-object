@@ -455,16 +455,15 @@ class Decimal implements JsonSerializable, Stringable
      */
     public function mod(self|string|int $value, ?int $scale = null): static
     {
-        if ($scale === null) {
-            $scale = $this->scale();
-        }
+        $decimal = static::create($value);
+        $scale = $this->resultScale($this, $decimal, $scale);
 
-        return new static(bcmod((string)$this, (string)static::create($value), $scale));
+        return new static(bcmod((string)$this, (string)$decimal, $scale));
     }
 
     /**
-     * @param int $scale Decimal places in the result (only used with mode "half up")
-     * @param int $roundMode ROUND_HALF_UP, ROUND_CEIL or ROUND_FLOOR. Anything else rounds half up.
+     * @param int $scale Decimal places in the result
+     * @param int $roundMode One of the ROUND_* constants of this class
      *
      * @throws \InvalidArgumentException
      *
@@ -475,24 +474,25 @@ class Decimal implements JsonSerializable, Stringable
         if ($scale < 0) {
             throw new InvalidArgumentException('Scale must be >= 0.');
         }
-
-        // Floor and ceil always round to a whole number in 1.x, the scale only labels the result.
-        $directed = in_array($roundMode, [static::ROUND_FLOOR, static::ROUND_CEIL], true);
-        $places = $directed ? 0 : $scale;
+        if (!in_array($roundMode, [static::ROUND_HALF_UP, static::ROUND_CEIL, static::ROUND_FLOOR], true)) {
+            throw new InvalidArgumentException('Unsupported round mode `' . $roundMode . '`.');
+        }
 
         $value = (string)$this;
-        $truncated = bcadd($value, '0', $places);
+        $truncated = bcadd($value, '0', $scale);
         if (bccomp($value, $truncated, $this->scale()) === 0) {
             return new static($truncated, $scale);
         }
 
+        $unit = $scale > 0 ? '0.' . str_repeat('0', $scale - 1) . '1' : '1';
+
         switch ($roundMode) {
             case static::ROUND_FLOOR:
-                $result = $this->isNegative() ? bcsub($truncated, '1', 0) : $truncated;
+                $result = $this->isNegative() ? bcsub($truncated, $unit, $scale) : $truncated;
 
                 break;
             case static::ROUND_CEIL:
-                $result = $this->isNegative() ? $truncated : bcadd($truncated, '1', 0);
+                $result = $this->isNegative() ? $truncated : bcadd($truncated, $unit, $scale);
 
                 break;
             default:
@@ -627,8 +627,10 @@ class Decimal implements JsonSerializable, Stringable
             $exponent = strlen($digits) - strlen($this->fractionalPart) - 1;
         }
 
-        // The radix mark stays even without decimals (`5.e0`) in 1.x.
-        $value = $digits[0] . static::RADIX_MARK . substr($digits, 1);
+        $value = $digits[0];
+        if (strlen($digits) > 1) {
+            $value .= static::RADIX_MARK . substr($digits, 1);
+        }
 
         if ($this->negative) {
             $value = '-' . $value;
@@ -800,8 +802,7 @@ class Decimal implements JsonSerializable, Stringable
 
         $this->negative = $matches[1] === '-';
         $integralPart = $matches[2];
-        // A mantissa of `1.0` is read as `1` in 1.x.
-        $fractionalPart = $matches[3] === '0' ? '' : $matches[3];
+        $fractionalPart = $matches[3];
         $exp = (int)$matches[4];
 
         if ($exp < 0) {
@@ -817,9 +818,7 @@ class Decimal implements JsonSerializable, Stringable
         $this->fractionalPart = $fractionalPart;
 
         if ($scale !== null) {
-            // 1.x pads positive exponents to the scale minus the integral digits.
-            $length = $exp < 0 ? $scale : $scale - strlen($this->integralPart);
-            $this->fractionalPart = str_pad($this->fractionalPart, $length, '0');
+            $this->fractionalPart = str_pad($this->fractionalPart, $scale, '0');
         }
     }
 
@@ -837,9 +836,8 @@ class Decimal implements JsonSerializable, Stringable
             throw new InvalidArgumentException('Scale must be >= 0.');
         }
 
-        // A scale of 0 is treated like no scale in 1.x and does not cut off decimals.
         $calculatedScale = strlen($this->fractionalPart);
-        if ($scale && $calculatedScale > $scale) {
+        if ($scale !== null && $calculatedScale > $scale) {
             if ($strict) {
                 throw new InvalidArgumentException('Loss of precision detected. Detected scale `' . $calculatedScale . '` > `' . $scale . '` as defined.');
             }
