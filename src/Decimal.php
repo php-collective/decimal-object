@@ -162,7 +162,7 @@ class Decimal implements JsonSerializable, Stringable
      *
      * This method is equivalent to the `==` operator.
      *
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      *
      * @return bool TRUE if this decimal is considered equal to the given value.
      *  Equal decimal values tie-break on precision.
@@ -173,7 +173,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      *
      * @return bool
      */
@@ -183,7 +183,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      *
      * @return bool
      */
@@ -193,7 +193,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      *
      * @return bool
      */
@@ -205,7 +205,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * @deprecated Use {@link greaterThanOrEquals()} instead.
      *
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      *
      * @return bool
      */
@@ -215,7 +215,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      *
      * @return bool
      */
@@ -232,7 +232,7 @@ class Decimal implements JsonSerializable, Stringable
      * - `0` if the instance is equal to $value, or
      * - `1` if the instance is greater than $value.
      *
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      *
      * @return int
      */
@@ -247,7 +247,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Add $value to this Decimal and return the sum as a new Decimal.
      *
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
@@ -281,7 +281,7 @@ class Decimal implements JsonSerializable, Stringable
      * Subtract $value from this Decimal and return the difference as a new
      * Decimal.
      *
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
@@ -389,12 +389,12 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Multiply this Decimal by $value and return the product as a new Decimal.
      *
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
-    public function multiply(self|string|int|float $value, ?int $scale = null): static
+    public function multiply(self|string|float|int $value, ?int $scale = null): static
     {
         $decimal = static::create($value);
         if ($scale === null) {
@@ -407,14 +407,14 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Divide this Decimal by $value and return the quotient as a new Decimal.
      *
-     * @param static|string|float|int $value
+     * @param self|string|float|int $value
      * @param int $scale Decimal places in the result
      *
      * @throws \DivisionByZeroError if $value is zero.
      *
      * @return static
      */
-    public function divide(self|string|int|float $value, int $scale): static
+    public function divide(self|string|float|int $value, int $scale): static
     {
         $decimal = static::create($value);
         if ($decimal->isZero()) {
@@ -427,7 +427,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * This method is equivalent to the ** operator.
      *
-     * @param static|string|int $exponent
+     * @param self|string|int $exponent
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
@@ -460,7 +460,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * This method is equivalent to the % operator.
      *
-     * @param static|string|int $value
+     * @param self|string|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
