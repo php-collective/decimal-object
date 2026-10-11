@@ -3,7 +3,7 @@
 [![CI](https://github.com/php-collective/decimal-object/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/php-collective/decimal-object/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/php-collective/decimal-object/branch/master/graph/badge.svg?token=L1thFB9nOG)](https://codecov.io/gh/php-collective/decimal-object)
 [![Latest Stable Version](https://poser.pugx.org/php-collective/decimal-object/v/stable.svg)](https://packagist.org/packages/php-collective/decimal-object)
-[![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%208.1-8892BF.svg)](https://php.net/)
+[![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%208.2-8892BF.svg)](https://php.net/)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%208-brightgreen.svg?style=flat)](https://phpstan.org/)
 [![License](https://poser.pugx.org/php-collective/decimal-object/license)](https://packagist.org/packages/php-collective/decimal-object)
 
@@ -26,7 +26,7 @@ Monetary values themselves could be handled also with [brick/money](https://gith
 
 For details see the [wiki](https://github.com/php-collective/decimal-object/wiki).
 
-Note: If you are looking for pre PHP 8.1 versions, check out the [legacy library](https://github.com/spryker/decimal-object).
+Note: PHP 8.1 is covered by the 1.3 releases. For anything older, check out the [legacy library](https://github.com/spryker/decimal-object).
 
 ## Features
 
@@ -40,6 +40,7 @@ Note: If you are looking for pre PHP 8.1 versions, check out the [legacy library
 
 ### Requirements
 
+- PHP 8.2+
 - `bcmath` PHP extension enabled
 
 ### Composer (preferred)
