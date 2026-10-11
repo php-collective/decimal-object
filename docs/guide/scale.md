@@ -47,7 +47,18 @@ A cut-off quotient does not multiply back to the original:
 echo Decimal::create('100')->divide('3', 2)->multiply(3); // 99.99
 ```
 
-When splitting an amount, calculate the last share as the remainder instead of dividing again.
+To split an amount without losing a cent, use [`split()` or `allocate()`](./arithmetic#splitting-an-amount).
+
+## Setting a fixed scale
+
+`withScale()` pads or rounds to an exact number of decimal places:
+
+```php
+echo Decimal::create('7')->withScale(2);     // 7.00
+echo Decimal::create('1.255')->withScale(2); // 1.26
+```
+
+See [Rounding](./rounding#withscale) for the rounding modes it accepts.
 
 ## Removing trailing zeros
 

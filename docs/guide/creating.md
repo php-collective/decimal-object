@@ -49,9 +49,25 @@ Localized strings such as `'1.018,90'` are rejected. Parse them with `NumberForm
 A float is converted with PHP's own float to string rules, which round to the `precision` ini setting. That hides small errors but cannot restore digits the float never had. For money and other exact values, read the number as a string from the request or the database.
 :::
 
-::: warning Scientific notation from untrusted input
-`'1e1000000000'` is twelve characters long and expands to a string of a billion digits. If the value comes from a request, reject exponent notation or check the size of the exponent before you create the object. A limit on the input length does not help.
+::: info Exponent limit
+Exponents beyond `Decimal::MAX_EXPONENT` (10000 in either direction) throw an `InvalidArgumentException`. Without a limit, the twelve characters of `'1e1000000000'` would expand to a string of a billion digits. A subclass can redefine the constant.
 :::
+
+## Optional input
+
+`tryCreate()` returns `null` where `create()` would throw for a value that is not numeric, and passes `null` through:
+
+```php
+Decimal::tryCreate('1.50'); // Decimal 1.50
+Decimal::tryCreate('abc');  // null
+Decimal::tryCreate('');     // null
+Decimal::tryCreate(null);   // null
+```
+
+This fits optional form fields and nullable columns.
+
+> [!TIP] Added in 1.4
+> `tryCreate()` and the exponent limit.
 
 ## Setting a scale
 
