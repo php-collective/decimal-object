@@ -8,6 +8,9 @@ PHP 8.2 is now required. Composer keeps PHP 8.1 projects on 1.3.
 
 - Rounding modes `ROUND_HALF_DOWN`, `ROUND_HALF_EVEN`, `ROUND_HALF_ODD`, `ROUND_UP` and `ROUND_DOWN`, see [Rounding](../guide/rounding#rounding-modes)
 - `withScale()` to pad or round to a fixed scale, and `round()` with a negative scale
+- `divide()` takes a rounding mode as third argument, `divideWithRemainder()` returns quotient and remainder
+- `roundToStep()` for multiples such as 0.05
+- `Decimal::createFromFloat()`, `zero()` and `one()`
 - `Decimal::sum()`, `average()`, `min()` and `max()`
 - `split()` and `allocate()` to divide an amount without a remainder getting lost
 - `shift()`, `between()`, `clamp()`, `isEven()`, `isOdd()` and `Decimal::tryCreate()`

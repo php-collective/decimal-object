@@ -17,10 +17,11 @@ The library is strict about it: a value keeps the scale it was created with, and
 | `add()`, `subtract()` | larger scale of both operands | `1.50 + 2.125 = 3.625` |
 | `multiply()` | sum of both scales | `1.55 * 2.00 = 3.1000` |
 | `divide()` | none, the argument is required | `10 / 3` at scale 4 is `3.3333` |
+| `divideWithRemainder()` | 0 for the quotient, larger scale of both for the remainder | `10 / 0.3` is `33` and `0.1` |
 | `pow()`, `sqrt()`, `mod()` | scale of the value | `1.5 ** 2 = 2.2` |
 | `round()`, `truncate()` | the scale you pass | `12.375` rounded to 2 is `12.38` |
 
-Every arithmetic method takes a scale argument to override the default. When the exact result has more digits than the scale allows, the rest is cut off without rounding.
+Every arithmetic method takes a scale argument to override the default. When the exact result has more digits than the scale allows, the rest is cut off without rounding. `divide()` rounds when you pass a mode as third argument.
 
 ## Repeated multiplication
 
