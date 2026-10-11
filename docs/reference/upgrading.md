@@ -93,7 +93,9 @@ See the [exception table](./api#exceptions).
 | --- | --- | --- |
 | `Decimal::create('23.74')->toInt()` | `23` | `RoundingNecessaryException` |
 | `Decimal::create('23.00')->toInt()` | `23` | `23` |
-| `Decimal::create('23.74')->toInt(Decimal::ROUND_DOWN)` | not available | `23` |
+| `Decimal::create('23.74')->toInt(Decimal::ROUND_DOWN)` | `23` | `23` |
+
+1.4 ignores the argument, so calls can be changed before the upgrade.
 
 `toFloat()` returns the nearest float for any value in the float range. It used to throw for values with long fractions.
 
