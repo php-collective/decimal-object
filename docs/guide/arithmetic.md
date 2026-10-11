@@ -1,0 +1,92 @@
+# Arithmetic
+
+Every operand can be a `Decimal`, a numeric string, an integer or a float. The result is always a new `Decimal`.
+
+```php
+use PhpCollective\DecimalObject\Decimal;
+
+$a = Decimal::create('1.50');
+```
+
+## Add and subtract
+
+```php
+echo $a->add('2.125');                    // 3.625
+echo Decimal::create('5')->subtract('7.5'); // -2.5
+```
+
+The result has the larger scale of the two operands.
+
+## Multiply
+
+```php
+echo Decimal::create('1.55')->multiply('2.00');    // 3.1000
+echo Decimal::create('1.55')->multiply('2.00', 2); // 3.10
+```
+
+Without a scale argument the scales of both operands are added, which is always enough to hold the exact product.
+
+## Divide
+
+`divide()` requires the scale, because a quotient can have endless decimals:
+
+```php
+echo Decimal::create('10')->divide('3', 4); // 3.3333
+echo Decimal::create('2')->divide('3', 2);  // 0.66
+```
+
+The result is cut off at the scale, not rounded. Divide with one more digit and round when you need the nearest value:
+
+```php
+echo Decimal::create('2')->divide('3', 3)->round(2); // 0.67
+```
+
+Dividing by zero throws a `DivisionByZeroError`.
+
+## Modulo
+
+```php
+echo Decimal::create('7')->mod(2);         // 1
+echo Decimal::create('-7')->mod(2);        // -1
+echo Decimal::create('10')->mod('0.3', 1); // 0.1
+```
+
+The sign follows the left operand, as with PHP's `%`. A zero operand throws a `DivisionByZeroError`.
+
+::: warning Fractional divisors
+The result has the scale of the value `mod()` is called on. `Decimal::create('10')->mod('0.3')` therefore returns `0`, because the remainder `0.1` does not fit a scale of 0. Pass the scale as second argument when the divisor has more decimals.
+:::
+
+## Power and square root
+
+```php
+echo Decimal::create('8')->pow(2);       // 64
+echo Decimal::create('1.5')->pow(2);     // 2.2
+echo Decimal::create('1.5')->pow(2, 2);  // 2.25
+echo Decimal::create('2')->pow(-1, 2);   // 0.50
+
+echo Decimal::create('18')->sqrt();      // 4
+echo Decimal::create('18')->sqrt(5);     // 4.24264
+```
+
+Both default to the scale of the value they are called on and cut off further digits, so pass a scale when the result needs more decimals than the input has.
+
+The exponent of `pow()` must be a whole number, and `sqrt()` of a negative value is not defined. bcmath reports both with a `ValueError`.
+
+## Sign
+
+```php
+echo Decimal::create('-23.44')->absolute(); // 23.44
+echo Decimal::create('23.44')->negate();    // -23.44
+```
+
+## Chaining
+
+```php
+$total = Decimal::create('100')
+    ->subtract('12.50')
+    ->multiply('1.19')
+    ->round(2);
+
+echo $total; // 104.13
+```

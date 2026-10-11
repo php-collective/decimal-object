@@ -1,0 +1,88 @@
+# Conversion
+
+## String
+
+A `Decimal` casts to its exact decimal string, including trailing zeros:
+
+```php
+use PhpCollective\DecimalObject\Decimal;
+
+$value = Decimal::create('19.90');
+
+echo $value;              // 19.90
+$string = (string)$value;
+$string = $value->toString();
+```
+
+Feeding that string back into `Decimal::create()` gives an equal object. This is the format to store and to send over an API.
+
+The scale comes back as the number of decimals in the string. If you created the object with a larger scale, such as `Decimal::create('0.1', 4)`, the string is still `0.1`, so pass the scale again when you recreate it.
+
+## JSON
+
+`Decimal` implements `JsonSerializable` and encodes as a string:
+
+```php
+echo json_encode(['total' => Decimal::create('19.90')]);
+// {"total":"19.90"}
+```
+
+A JSON number would be read back as a float by most clients, which defeats the purpose.
+
+## Integer
+
+`toInt()` drops the decimals without rounding:
+
+```php
+echo Decimal::create('-23.74')->toInt(); // -23
+```
+
+Values outside the range of a PHP integer throw a `TypeError`. Check with `isBigInteger()` first when the value may be large:
+
+```php
+$value = Decimal::create('9223372036854775808');
+
+if (!$value->isBigInteger()) {
+    $int = $value->toInt();
+}
+```
+
+## Float
+
+```php
+var_dump(Decimal::create('-23.44')->toFloat()); // float(-23.44)
+```
+
+A float is an approximation. Use it for display libraries and charts, not for further calculation. `toFloat()` throws a `TypeError` when `isBigDecimal()` is true, which is the case when the integral or the fractional digits exceed `PHP_INT_MAX`.
+
+## Scientific notation
+
+```php
+echo Decimal::create('-22.345')->toScientific(); // -2.2345e1
+echo Decimal::create('0.00230')->toScientific(); // 2.30e-3
+echo Decimal::create('1200')->toScientific();    // 1.2e3
+echo Decimal::create('0')->toScientific();       // 0e0
+```
+
+Decimals are kept as written. Call `trim()` first for the shortest form. A mantissa without decimals keeps its decimal point, so `5` becomes `5.e0`.
+
+## Localized output
+
+The object has no formatting of its own. Pass the string to `NumberFormatter` or to your framework's number helper. Most formatters convert to float internally, so check their precision limits for large values.
+
+## Debugging
+
+`var_dump()` and similar tools show the value and the scale instead of the internal parts:
+
+```php
+var_dump(Decimal::create('1.10'));
+```
+
+```
+object(PhpCollective\DecimalObject\Decimal)#2 (2) {
+  ["value"]=>
+  string(4) "1.10"
+  ["scale"]=>
+  int(2)
+}
+```
