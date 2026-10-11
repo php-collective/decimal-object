@@ -74,6 +74,7 @@ class Decimal implements JsonSerializable, Stringable
 
         $this->setValue($value, $scale);
         $this->setScale($scale, $strict);
+        $this->normalizeZero();
     }
 
     /**
@@ -105,11 +106,16 @@ class Decimal implements JsonSerializable, Stringable
             throw new InvalidArgumentException('Invalid non numeric value');
         }
 
-        if (!is_string($value)) {
-            $value = (string)$value;
+        if (is_float($value)) {
+            if (!is_finite($value)) {
+                throw new InvalidArgumentException('Invalid non finite value');
+            }
+
+            // PHP renders large and small floats as `1.0E+25`, that zero is not a significant digit.
+            return str_replace('.0E', 'E', (string)$value);
         }
 
-        return $value;
+        return (string)$value;
     }
 
     /**
@@ -120,22 +126,13 @@ class Decimal implements JsonSerializable, Stringable
     protected function normalizeValue(string $value): string
     {
         $value = trim($value);
-        /** @var string $value */
-        $value = preg_replace(
-            [
-                '/^^(-?)(\.)(.*)$/', // omitted leading zero
-                '/^0+(.)(\..*)?$/', // multiple leading zeros
-                '/^(\+(.*)|(-)(0))$/', // leading positive sign, tolerate minus zero too
-            ],
-            [
-                '${1}0.${3}',
-                '${1}${2}',
-                '${4}${2}',
-            ],
-            $value,
-        );
+        $sign = str_starts_with($value, '-') ? '-' : '';
+        $value = ltrim(ltrim($value, '+-'), '0');
+        if ($value === '' || !ctype_digit($value[0])) {
+            $value = '0' . $value;
+        }
 
-        return $value;
+        return $sign . $value;
     }
 
     /**
@@ -441,7 +438,7 @@ class Decimal implements JsonSerializable, Stringable
             $scale = $this->scale();
         }
 
-        return new static(bcpow((string)$this, (string)$exponent, $scale));
+        return new static(bcpow((string)$this, (string)static::create($exponent), $scale));
     }
 
     /**
@@ -470,61 +467,52 @@ class Decimal implements JsonSerializable, Stringable
      */
     public function mod(self|string|int $value, ?int $scale = null): static
     {
-        if ($scale === null) {
-            $scale = $this->scale();
-        }
+        $decimal = static::create($value);
+        $scale = $this->resultScale($this, $decimal, $scale);
 
-        return new static(bcmod((string)$this, (string)$value, $scale));
+        return new static(bcmod((string)$this, (string)$decimal, $scale));
     }
 
     /**
-     * @param int $scale Decimal places in the result (only used with mode "half up")
-     * @param int $roundMode
+     * @param int $scale Decimal places in the result
+     * @param int $roundMode One of the ROUND_* constants of this class
+     *
+     * @throws \InvalidArgumentException
      *
      * @return static
      */
     public function round(int $scale = 0, int $roundMode = self::ROUND_HALF_UP): static
     {
-        $exponent = $scale + 1;
+        if ($scale < 0) {
+            throw new InvalidArgumentException('Scale must be >= 0.');
+        }
+        if (!in_array($roundMode, [static::ROUND_HALF_UP, static::ROUND_CEIL, static::ROUND_FLOOR], true)) {
+            throw new InvalidArgumentException('Unsupported round mode `' . $roundMode . '`.');
+        }
+
+        $value = (string)$this;
+        $truncated = bcadd($value, '0', $scale);
+        if (bccomp($value, $truncated, $this->scale()) === 0) {
+            return new static($truncated, $scale);
+        }
+
+        $unit = $scale > 0 ? '0.' . str_repeat('0', $scale - 1) . '1' : '1';
 
         switch ($roundMode) {
             case static::ROUND_FLOOR:
-                $stringValue = (string)$this;
+                $result = $this->isNegative() ? bcsub($truncated, $unit, $scale) : $truncated;
 
-                // If already an integer, return as is
-                if (!str_contains($stringValue, '.')) {
-                    return new static($stringValue, $scale);
-                }
-
-                // For positive values, truncate the decimal part (round down)
-                if (!$this->isNegative()) {
-                    return new static(bcsub($stringValue, bcmod($stringValue, '1'), 0), $scale);
-                }
-
-                // For negative values, round down away from zero
-                return new static(bcsub($stringValue, '1', 0), $scale);
+                break;
             case static::ROUND_CEIL:
-                $stringValue = (string)$this;
+                $result = $this->isNegative() ? $truncated : bcadd($truncated, $unit, $scale);
 
-                // If already an integer, return as is
-                if (!str_contains($stringValue, '.')) {
-                    return new static($stringValue, $scale);
-                }
-
-                // If negative, truncate (remove decimals without adding 1)
-                if ($this->isNegative()) {
-                    return new static(bcsub($stringValue, '0', 0), $scale);
-                }
-
-                // Otherwise, round up for positive numbers
-                return new static(bcadd($stringValue, '1', 0), $scale);
-            case static::ROUND_HALF_UP:
+                break;
             default:
-                $e = bcpow('10', (string)$exponent);
-                $v = bcdiv(bcadd(bcmul((string)$this, $e, 0), $this->isNegative() ? '-5' : '5'), $e, $scale);
+                $e = bcpow('10', (string)($scale + 1));
+                $result = bcdiv(bcadd(bcmul($value, $e, 0), $this->isNegative() ? '-5' : '5'), $e, $scale);
         }
 
-        return new static($v, $scale);
+        return new static($result, $scale);
     }
 
     /**
@@ -610,7 +598,9 @@ class Decimal implements JsonSerializable, Stringable
      */
     public function isBigInteger(): bool
     {
-        return bccomp($this->integralPart, (string)PHP_INT_MAX) === 1 || bccomp($this->integralPart, (string)PHP_INT_MIN) === -1;
+        $value = ($this->negative ? '-' : '') . $this->integralPart;
+
+        return bccomp($value, (string)PHP_INT_MAX) === 1 || bccomp($value, (string)PHP_INT_MIN) === -1;
     }
 
     /**
@@ -618,8 +608,7 @@ class Decimal implements JsonSerializable, Stringable
      */
     public function isBigDecimal(): bool
     {
-        return $this->isBigInteger() ||
-            bccomp($this->fractionalPart, (string)PHP_INT_MAX) === 1 || bccomp($this->fractionalPart, (string)PHP_INT_MIN) === -1;
+        return $this->isBigInteger() || bccomp($this->fractionalPart ?: '0', (string)PHP_INT_MAX) === 1;
     }
 
     /**
@@ -635,38 +624,31 @@ class Decimal implements JsonSerializable, Stringable
      */
     public function toScientific(): string
     {
-        if ($this->integralPart) {
-            $exponent = 0;
-            $integralPart = $this->integralPart;
-            while ($integralPart >= 10) {
-                $integralPart /= 10;
-                $exponent++;
-            }
+        if ($this->isZero()) {
+            return $this->toString() . static::EXP_MARK . '0';
+        }
 
-            $value = (string)$integralPart;
-            if (!str_contains($value, '.')) {
-                $value .= '.';
+        if ($this->integralPart !== '0') {
+            $exponent = strlen($this->integralPart) - 1;
+            $digits = $this->integralPart . $this->fractionalPart;
+            if ($this->fractionalPart === '') {
+                $digits = rtrim($digits, '0');
             }
-            $value .= $this->fractionalPart;
         } else {
-            $exponent = -1;
-            // 00002
-            // 20000
-            $fractionalPart = $this->fractionalPart;
-            while (str_starts_with($fractionalPart, '0')) {
-                $fractionalPart = substr($fractionalPart, 1);
-                $exponent--;
-            }
+            $digits = ltrim($this->fractionalPart, '0');
+            $exponent = strlen($digits) - strlen($this->fractionalPart) - 1;
+        }
 
-            $pos = abs($exponent) - 1;
-            $value = substr($this->fractionalPart, $pos, 1) . '.' . substr($this->fractionalPart, $pos + 1);
+        $value = $digits[0];
+        if (strlen($digits) > 1) {
+            $value .= static::RADIX_MARK . substr($digits, 1);
         }
 
         if ($this->negative) {
             $value = '-' . $value;
         }
 
-        return $value . 'e' . $exponent;
+        return $value . static::EXP_MARK . $exponent;
     }
 
     /**
@@ -744,6 +726,7 @@ class Decimal implements JsonSerializable, Stringable
         if ($negative !== null) {
             $clone->negative = $negative;
         }
+        $clone->normalizeZero();
 
         return $clone;
     }
@@ -824,39 +807,30 @@ class Decimal implements JsonSerializable, Stringable
      */
     protected function fromScientific(string $value, ?int $scale): void
     {
-        $pattern = '/^(-?)(\d+(?:' . static::RADIX_MARK . '\d*)?|' .
-            '[' . static::RADIX_MARK . ']' . '\d+)' . static::EXP_MARK . '(-?\d*)?$/i';
-        preg_match($pattern, $value, $matches);
-        if (!$matches) {
+        $pattern = '/^(-?)(\d+)(?:' . preg_quote(static::RADIX_MARK, '/') . '(\d*))?' . static::EXP_MARK . '([+-]?\d+)$/i';
+        if (preg_match($pattern, $value, $matches) !== 1) {
             throw new InvalidArgumentException('Invalid scientific value/notation: ' . $value);
         }
 
         $this->negative = $matches[1] === '-';
-        /** @var string $value */
-        $value = preg_replace('/\b\.0$/', '', $matches[2]);
-        $exp = (int)$matches[3];
+        $integralPart = $matches[2];
+        $fractionalPart = $matches[3];
+        $exp = (int)$matches[4];
 
         if ($exp < 0) {
-            $this->integralPart = '0';
-            /** @var string $value */
-            $value = preg_replace('/^(\d+)(\.)?(\d+)$/', '${1}${3}', $value, 1);
-            $this->fractionalPart = str_repeat('0', -$exp - 1) . $value;
-
-            if ($scale !== null) {
-                $this->fractionalPart = str_pad($this->fractionalPart, $scale, '0');
-            }
+            $integralPart = str_pad($integralPart, -$exp + 1, '0', STR_PAD_LEFT);
+            $fractionalPart = substr($integralPart, $exp) . $fractionalPart;
+            $integralPart = substr($integralPart, 0, $exp);
         } else {
-            $this->integralPart = bcmul($matches[2], bcpow('10', (string)$exp));
+            $integralPart .= substr(str_pad($fractionalPart, $exp, '0'), 0, $exp);
+            $fractionalPart = substr($fractionalPart, $exp);
+        }
 
-            $pos = strlen($this->integralPart);
-            if (str_contains($value, '.')) {
-                $pos++;
-            }
-            $this->fractionalPart = rtrim(substr($value, $pos), '.');
+        $this->integralPart = ltrim($integralPart, '0') ?: '0';
+        $this->fractionalPart = $fractionalPart;
 
-            if ($scale !== null) {
-                $this->fractionalPart = str_pad($this->fractionalPart, $scale - strlen($this->integralPart), '0');
-            }
+        if ($scale !== null) {
+            $this->fractionalPart = str_pad($this->fractionalPart, $scale, '0');
         }
     }
 
@@ -870,8 +844,12 @@ class Decimal implements JsonSerializable, Stringable
      */
     protected function setScale(?int $scale, bool $strict): void
     {
+        if ($scale !== null && $scale < 0) {
+            throw new InvalidArgumentException('Scale must be >= 0.');
+        }
+
         $calculatedScale = strlen($this->fractionalPart);
-        if ($scale && $calculatedScale > $scale) {
+        if ($scale !== null && $calculatedScale > $scale) {
             if ($strict) {
                 throw new InvalidArgumentException('Loss of precision detected. Detected scale `' . $calculatedScale . '` > `' . $scale . '` as defined.');
             }
@@ -880,5 +858,17 @@ class Decimal implements JsonSerializable, Stringable
         }
 
         $this->scale = $scale ?? $calculatedScale;
+    }
+
+    /**
+     * Zero has no sign, `-0.00` would otherwise report as negative.
+     *
+     * @return void
+     */
+    protected function normalizeZero(): void
+    {
+        if ($this->negative && $this->isZero()) {
+            $this->negative = false;
+        }
     }
 }
