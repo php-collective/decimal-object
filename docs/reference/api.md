@@ -25,8 +25,8 @@ See [Creating decimals](../guide/creating).
 | `multiply($value, ?int $scale = null): static` | Product | sum of both |
 | `divide($value, int $scale, ?int $roundMode = null): static` | Quotient, cut off at `$scale`, or rounded when a mode is given | required |
 | `divideWithRemainder($value): array` | Whole number quotient and remainder | 0, and larger of both |
-| `mod($value, ?int $scale = null): static` | Remainder. `$value` is a `Decimal`, string or integer. | scale of the value |
-| `pow($exponent, ?int $scale = null): static` | Power. `$exponent` is a whole number as `Decimal`, string or integer. | scale of the value |
+| `mod($value, ?int $scale = null): static` | Remainder | scale of the value |
+| `pow($exponent, ?int $scale = null): static` | Power. `$exponent` is a whole number. | scale of the value |
 | `sqrt(?int $scale = null): static` | Square root | scale of the value |
 | `shift(int $places): static` | Moves the decimal point, multiplying by a power of ten | follows the digits |
 | `absolute(): static` | Value without sign | unchanged |

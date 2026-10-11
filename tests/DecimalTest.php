@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Stringable;
 use TypeError;
+use ValueError;
 
 class DecimalTest extends TestCase
 {
@@ -1980,5 +1981,46 @@ class DecimalTest extends TestCase
         $shares = $decimal->split(2);
 
         $this->assertSame(['0.8', '0.7'], array_map('strval', $shares));
+    }
+
+    /**
+     * Without `float` in the parameter type PHP turns 2.5 into 2 for callers not using strict types.
+     *
+     * @return void
+     */
+    public function testModFloatOperand(): void
+    {
+        $this->assertSame('2.0', (string)(new Decimal('7'))->mod(2.5, 1));
+        $this->assertSame('2.0', (string)(new Decimal('7.0'))->mod(2.5));
+        $this->assertSame('1', (string)(new Decimal('7'))->mod(2.0));
+    }
+
+    /**
+     * @return void
+     */
+    public function testPowFloatOperand(): void
+    {
+        $this->assertSame('16', (string)(new Decimal('4'))->pow(2.0));
+    }
+
+    /**
+     * @return void
+     */
+    public function testPowFractionalFloatOperand(): void
+    {
+        $this->expectException(ValueError::class);
+
+        (new Decimal('4'))->pow(0.5);
+    }
+
+    /**
+     * @return void
+     */
+    public function testFloatOperandsAreNotTruncatedWithoutStrictTypes(): void
+    {
+        $result = require __DIR__ . '/data/float_operands.php';
+
+        $this->assertSame('2.0', $result['mod']);
+        $this->assertSame(ValueError::class, $result['pow']);
     }
 }
