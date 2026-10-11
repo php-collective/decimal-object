@@ -120,11 +120,11 @@ class Decimal implements JsonSerializable, Stringable
     protected int $scale = 0;
 
     /**
-     * @param object|string|float|int $value A float is rejected, see the class description.
+     * @param \Stringable|string|float|int $value A float is rejected, see the class description.
      * @param int|null $scale Decimal places. Omit to take them from the value. Zeros are added
      *   to reach a larger scale; a smaller one is only accepted if no digit other than zero is lost.
      */
-    public function __construct(object|string|float|int $value, ?int $scale = null)
+    public function __construct(Stringable|string|float|int $value, ?int $scale = null)
     {
         $value = $this->parseValue($value);
         $value = $this->normalizeValue($value);
@@ -143,22 +143,19 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param object|string|float|int $value
+     * @param \Stringable|string|float|int $value
      *
      * @throws \PhpCollective\DecimalObject\Exception\InvalidNumberException
      * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException For a float.
      *
      * @return string
      */
-    protected function parseValue(object|string|float|int $value): string
+    protected function parseValue(Stringable|string|float|int $value): string
     {
         if (is_float($value)) {
             throw new InvalidArgumentException('Floats are not accepted, use Decimal::createFromFloat().');
         }
-        if (is_object($value)) {
-            if (!($value instanceof Stringable)) {
-                throw new InvalidNumberException('Invalid value');
-            }
+        if ($value instanceof Stringable) {
             $value = (string)$value;
         }
 
@@ -193,15 +190,15 @@ class Decimal implements JsonSerializable, Stringable
      * Otherwise, create a new Decimal instance from the given value and return
      * it.
      *
-     * @param object|string|float|int $value
+     * @param \Stringable|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
-    public static function create(object|string|float|int $value, ?int $scale = null): static
+    public static function create(Stringable|string|float|int $value, ?int $scale = null): static
     {
         if ($scale === null && $value instanceof static) {
-            return clone $value;
+            return $value;
         }
 
         return new static($value, $scale);
@@ -210,12 +207,12 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Like create(), but returns null for null and for values that are not numeric.
      *
-     * @param object|string|float|int|null $value
+     * @param \Stringable|string|float|int|null $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static|null
      */
-    public static function tryCreate(object|string|float|int|null $value, ?int $scale = null): ?static
+    public static function tryCreate(Stringable|string|float|int|null $value, ?int $scale = null): ?static
     {
         if ($value === null) {
             return null;
@@ -274,7 +271,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param iterable<object|string|float|int> $values
+     * @param iterable<\Stringable|string|float|int> $values
      *
      * @return static
      */
@@ -289,7 +286,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param iterable<object|string|float|int> $values
+     * @param iterable<\Stringable|string|float|int> $values
      * @param int $scale Decimal places in the result
      * @param \RoundingMode|int $roundMode One of the ROUND_* constants
      *
@@ -313,7 +310,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param iterable<object|string|float|int> $values
+     * @param iterable<\Stringable|string|float|int> $values
      *
      * @return static
      */
@@ -323,7 +320,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param iterable<object|string|float|int> $values
+     * @param iterable<\Stringable|string|float|int> $values
      *
      * @return static
      */
@@ -333,7 +330,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @param iterable<object|string|float|int> $values
+     * @param iterable<\Stringable|string|float|int> $values
      * @param int $direction -1 for the smallest, 1 for the largest value
      *
      * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
@@ -1031,7 +1028,7 @@ class Decimal implements JsonSerializable, Stringable
      * The shares add up to this value exactly. What cannot be divided evenly at the scale
      * of this value goes to the first shares, one smallest unit each.
      *
-     * @param array<object|string|float|int> $ratios Non negative weights, keys are preserved.
+     * @param array<\Stringable|string|float|int> $ratios Non negative weights, keys are preserved.
      *
      * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
@@ -1138,9 +1135,11 @@ class Decimal implements JsonSerializable, Stringable
             throw new InvalidArgumentException('Scale must be >= 0.');
         }
 
-        $decimalPart = substr($this->fractionalPart, 0, $scale);
+        if ($scale >= $this->scale()) {
+            return $this;
+        }
 
-        return $this->copy($this->integralPart, $decimalPart);
+        return $this->round($scale, static::ROUND_DOWN);
     }
 
     /**
@@ -1163,31 +1162,35 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * Returns the decimal as int. Does not round.
+     * Returns the decimal as int.
      *
-     * This method is equivalent to a cast to int.
+     * @param \RoundingMode|int $roundMode Applied when the value has decimals other than zero.
+     *   By default such a value is refused; pass ROUND_DOWN for what a cast to int does.
      *
      * @throws \PhpCollective\DecimalObject\Exception\OverflowException
      *
      * @return int
      */
-    public function toInt(): int
+    public function toInt(RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): int
     {
-        if ($this->isBigInteger()) {
+        $rounded = new static($this->roundToScale(0, static::roundMode($roundMode)));
+        if (!$rounded->fitsInt()) {
             throw new OverflowException('Value is out of range for an integer.');
         }
 
-        return (int)$this->toString();
+        return (int)$rounded->toString();
     }
 
     /**
+     * Whether the whole number part is within the range of a PHP integer.
+     *
      * @return bool
      */
-    public function isBigInteger(): bool
+    public function fitsInt(): bool
     {
         $value = ($this->negative ? '-' : '') . $this->integralPart;
 
-        return bccomp($value, (string)PHP_INT_MAX) === 1 || bccomp($value, (string)PHP_INT_MIN) === -1;
+        return bccomp($value, (string)PHP_INT_MAX) !== 1 && bccomp($value, (string)PHP_INT_MIN) !== -1;
     }
 
     /**
