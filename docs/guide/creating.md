@@ -7,7 +7,7 @@ $a = Decimal::create('1.234');
 $b = new Decimal('1.234');
 ```
 
-Both forms take the same arguments. `create()` reads better in a chain and also accepts an existing `Decimal`.
+Both forms accept numeric values and `Stringable` objects, including an existing `Decimal`. `create()` reads better in a chain, and returns a `Decimal` of the called class as is when no scale is given.
 
 ## Accepted input
 

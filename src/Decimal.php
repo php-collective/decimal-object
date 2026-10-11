@@ -186,9 +186,8 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Returns a Decimal instance from the given value.
      *
-     * If the value is already a Decimal instance, then (since immutable) return it unmodified.
-     * Otherwise, create a new Decimal instance from the given value and return
-     * it.
+     * If the value is already an instance of this class and no scale is supplied,
+     * return it as is. Otherwise, construct a new instance from the value.
      *
      * @param \Stringable|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
@@ -356,12 +355,12 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Equality
      *
-     * This method is equivalent to the `==` operator.
+     * Compares numeric values, ignoring differences in scale.
      *
      * @param self|string|float|int $value
      *
      * @return bool TRUE if this decimal is considered equal to the given value.
-     *  Equal decimal values tie-break on precision.
+     *  Trailing zeros do not affect equality.
      */
     public function equals(self|string|float|int $value): bool
     {
@@ -539,7 +538,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * Returns if truly zero.
+     * Returns whether the value is zero.
      *
      * @return bool
      */
@@ -549,7 +548,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * Returns if truly negative (not zero).
+     * Returns whether the value is negative.
      *
      * @return bool
      */
@@ -559,7 +558,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * Returns if truly positive (not zero).
+     * Returns whether the value is positive.
      *
      * @return bool
      */
@@ -754,7 +753,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * This method is equivalent to the ** operator.
+     * Raises this decimal to a whole-number exponent.
      *
      * @param self|string|float|int $exponent A whole number up to MAX_EXPONENT in either direction
      * @param int|null $scale Decimal places in the result. Omit for the exact result of a positive
@@ -831,7 +830,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * This method is equivalent to the % operator.
+     * Returns the remainder.
      *
      * @param self|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit for the larger scale of both, which is exact.

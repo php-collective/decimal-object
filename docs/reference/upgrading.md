@@ -164,3 +164,11 @@ Zero has no sign. `'-0.0'` becomes `0.0`, `isNegative()` is false for it, and `n
 #### Operands
 
 `mod()` and `pow()` accept operands in scientific notation.
+
+## 1.4.1
+
+`mod()` and `pow()` now accept float operands. Subclasses overriding these methods must include `float` in their operand type to keep their signatures compatible.
+
+## 1.4.2
+
+Comparisons use every stored decimal. `Decimal::create('1.9', 0)->compareTo(1)` returned `0` and now returns `1`. In 2.0 that value cannot be created without a rounding mode.

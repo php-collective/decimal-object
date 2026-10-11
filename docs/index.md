@@ -3,7 +3,7 @@ layout: home
 hero:
   name: Decimal Object
   text: Exact decimal arithmetic for PHP
-  tagline: An immutable value object on top of bcmath. No custom extension, no float rounding error.
+  tagline: An immutable value object on top of bcmath. Uses bcmath, no float rounding error.
   image:
     src: /logo.svg
     alt: Decimal Object logo
