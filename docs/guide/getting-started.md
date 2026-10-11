@@ -1,5 +1,7 @@
 # Getting started
 
+Complete [Installation](./installation) first.
+
 Floats cannot represent most decimal fractions exactly:
 
 ```php
@@ -7,16 +9,23 @@ var_dump(0.1 + 0.2 === 0.3); // bool(false)
 var_dump(0.1 + 0.2 - 0.3);   // float(5.551115123125783E-17)
 ```
 
-`Decimal` stores the number as a string of digits and calculates with bcmath, so the result is the one you would get on paper:
+`Decimal` stores the number as a string of digits and calculates with bcmath, so decimal fractions can be added exactly.
+
+Save this as `example.php` in the directory containing `composer.json`:
 
 ```php
+<?php
+require __DIR__ . '/vendor/autoload.php';
+
 use PhpCollective\DecimalObject\Decimal;
 
 $sum = Decimal::create('0.1')->add('0.2');
 
-echo $sum;                  // 0.3
+echo $sum, PHP_EOL;           // 0.3
 var_dump($sum->equals('0.3')); // bool(true)
 ```
+
+Run `php example.php`. Later snippets use the same Composer autoloader and `Decimal` import.
 
 ## Immutability
 
@@ -46,7 +55,7 @@ if ($gross->greaterThan('20')) {
 
 ## Use strings for input
 
-Pass decimal strings whenever you can. A float has already lost digits before the object sees it:
+Pass decimal strings whenever you can. Float conversion follows PHP's `precision` setting. With its default of 14 digits, string conversion drops digits in this example:
 
 ```php
 echo Decimal::create('1234567890.1234567'); // 1234567890.1234567

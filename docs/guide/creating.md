@@ -7,7 +7,7 @@ $a = Decimal::create('1.234');
 $b = new Decimal('1.234');
 ```
 
-Both forms take the same arguments. `create()` reads better in a chain and also accepts an existing `Decimal`.
+Both forms accept numeric values and `Stringable` objects, including an existing `Decimal`. Without an explicit scale, `create()` clones an instance of the called class and preserves its declared scale; the constructor reads the string value and detects its scale again.
 
 ## Accepted input
 
@@ -79,7 +79,7 @@ Exponents beyond `Decimal::MAX_EXPONENT` (10000 in either direction) throw an `I
 
 ## Optional input
 
-`tryCreate()` returns `null` where `create()` would throw for a value that is not numeric, and passes `null` through:
+`tryCreate()` returns `null` for `null` or any input rejected with `InvalidArgumentException`, including non-numeric or non-finite values, excessive exponents and negative scales:
 
 ```php
 Decimal::tryCreate('1.50'); // Decimal 1.50
@@ -114,7 +114,7 @@ echo $value->add('0.2'); // 0.3000
 ```
 
 ::: warning A scale of 0
-`0` is read as "no scale given" and does not cut off decimals: `Decimal::create('1.5', 0)` stays `1.5`. Use `truncate()` or `round()` to get a whole number. The next major version will treat `0` like any other scale.
+`0` is read as "no scale given" and does not cut off decimals: `Decimal::create('1.5', 0)` stays `1.5`. Its declared scale is still 0, so later arithmetic can truncate fractional digits: adding `1` produces `2`. Comparisons use the stored value. Use `truncate()` or `round()` to get a whole number. The next major version will treat `0` like any other scale.
 :::
 
 ### Strict mode

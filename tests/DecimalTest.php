@@ -602,6 +602,26 @@ class DecimalTest extends TestCase
     }
 
     /**
+     * @return void
+     */
+    public function testComparisonUsesStoredFractionalDigits(): void
+    {
+        $positive = Decimal::create('1.9', 0);
+        $negative = Decimal::create('-1.9', 0);
+        $smaller = Decimal::create('1.8', 0);
+
+        $this->assertSame('1.9', (string)$positive);
+        $this->assertSame(0, $positive->scale());
+        $this->assertSame(1, $positive->compareTo(1));
+        $this->assertSame(-1, Decimal::create(1)->compareTo($positive));
+        $this->assertSame(-1, $negative->compareTo(-1));
+        $this->assertSame(1, Decimal::create(-1)->compareTo($negative));
+        $this->assertSame(1, $positive->compareTo($smaller));
+        $this->assertFalse($positive->equals($smaller));
+        $this->assertTrue($positive->equals('1.90'));
+    }
+
+    /**
      * @param mixed $value
      * @param int $scale
      * @param string $expected

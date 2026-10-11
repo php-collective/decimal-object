@@ -16,7 +16,7 @@ echo Decimal::create('-12.5')->round();    // -13
 echo Decimal::create('11')->round(2);      // 11.00
 ```
 
-The first argument is the number of decimal places, `0` by default. The result always has exactly that scale, padded with zeros if needed.
+The first argument is the number of decimal places, `0` by default. For non-negative scales, the half-rounding modes pad the result with zeros if needed. Negative scales round to positions before the decimal point. `ROUND_FLOOR` and `ROUND_CEIL` have the legacy behavior described below.
 
 The default mode rounds half away from zero, like PHP's `round()`. It works on the decimal digits and never passes through a float.
 
