@@ -775,12 +775,12 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * This method is equivalent to the ** operator.
      *
-     * @param self|string|int $exponent
+     * @param self|string|float|int $exponent
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
-    public function pow(self|string|int $exponent, ?int $scale = null): static
+    public function pow(self|string|float|int $exponent, ?int $scale = null): static
     {
         if ($scale === null) {
             $scale = $this->scale();
@@ -808,12 +808,12 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * This method is equivalent to the % operator.
      *
-     * @param self|string|int $value
+     * @param self|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
      *
      * @return static
      */
-    public function mod(self|string|int $value, ?int $scale = null): static
+    public function mod(self|string|float|int $value, ?int $scale = null): static
     {
         if ($scale === null) {
             $scale = $this->scale();
