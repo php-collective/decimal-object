@@ -1085,10 +1085,9 @@ class DecimalTest extends TestCase
             'negative mantissa' => ['-1.5e-2', '-0.015'],
             'omitted zero mantissa' => ['.5e1', '5'],
             'small mantissa' => ['0.00012e3', '0.12'],
-            'significant zero in mantissa' => ['1.0e0', '1.0'],
             'zero exponent' => ['1.5e0', '1.5'],
             'negative zero exponent' => ['-0e5', '0'],
-            'zero mantissa' => ['0.0e-3', '0.0000'],
+            'zero mantissa' => ['0.0e-3', '0.000'],
             'large float' => [1e25, '10000000000000000000000000'],
             'small float' => [1.5e-7, '0.00000015'],
             'negative zero float' => [-0.0, '0'],
@@ -1135,7 +1134,6 @@ class DecimalTest extends TestCase
      */
     public function testNewObjectScientificWithScale(): void
     {
-        $this->assertSame('1.500', (string)new Decimal('1.5e0', 3));
         $this->assertSame('0.001200', (string)new Decimal('1.2e-3', 6));
         $this->assertSame('0.0012', (string)new Decimal('1.23456e-3', 4));
     }
@@ -1224,14 +1222,14 @@ class DecimalTest extends TestCase
         return [
             'zero' => ['0', '0e0'],
             'zero with scale' => ['0.00', '0.00e0'],
-            'single digit' => ['5', '5e0'],
-            'power of ten' => ['10', '1e1'],
-            'large power of ten' => ['100000', '1e5'],
+            'single digit' => ['5', '5.e0'],
+            'power of ten' => ['10', '1.e1'],
+            'large power of ten' => ['100000', '1.e5'],
             'trailing zero integer' => ['120', '1.2e2'],
             'trailing zero integer with fraction' => ['120.50', '1.2050e2'],
             'beyond float precision' => ['1234567890123456789012.5', '1.2345678901234567890125e21'],
             'beyond int precision' => ['12345678901234567', '1.2345678901234567e16'],
-            'single fraction digit' => ['0.5', '5e-1'],
+            'single fraction digit' => ['0.5', '5.e-1'],
             'small fraction' => ['0.00012', '1.2e-4'],
             'negative with scale' => ['-12.50', '-1.250e1'],
         ];

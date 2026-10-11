@@ -639,10 +639,8 @@ class Decimal implements JsonSerializable, Stringable
             $exponent = strlen($digits) - strlen($this->fractionalPart) - 1;
         }
 
-        $value = $digits[0];
-        if (strlen($digits) > 1) {
-            $value .= static::RADIX_MARK . substr($digits, 1);
-        }
+        // The radix mark stays even without decimals (`5.e0`) in 1.x.
+        $value = $digits[0] . static::RADIX_MARK . substr($digits, 1);
 
         if ($this->negative) {
             $value = '-' . $value;
@@ -814,7 +812,8 @@ class Decimal implements JsonSerializable, Stringable
 
         $this->negative = $matches[1] === '-';
         $integralPart = $matches[2];
-        $fractionalPart = $matches[3];
+        // A mantissa of `1.0` is read as `1` in 1.x.
+        $fractionalPart = $matches[3] === '0' ? '' : $matches[3];
         $exp = (int)$matches[4];
 
         if ($exp < 0) {
@@ -830,7 +829,9 @@ class Decimal implements JsonSerializable, Stringable
         $this->fractionalPart = $fractionalPart;
 
         if ($scale !== null) {
-            $this->fractionalPart = str_pad($this->fractionalPart, $scale, '0');
+            // 1.x pads positive exponents to the scale minus the integral digits.
+            $length = $exp < 0 ? $scale : $scale - strlen($this->integralPart);
+            $this->fractionalPart = str_pad($this->fractionalPart, $length, '0');
         }
     }
 
