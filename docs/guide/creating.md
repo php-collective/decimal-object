@@ -46,8 +46,32 @@ Decimal::create(INF);     // Invalid non finite value
 Localized strings such as `'1.018,90'` are rejected. Parse them with `NumberFormatter` or your framework's locale tools first.
 
 ::: warning Floats
-A float is converted with PHP's own float to string rules, which round to the `precision` ini setting. That hides small errors but cannot restore digits the float never had. For money and other exact values, read the number as a string from the request or the database.
+A float is converted with PHP's own float to string rules, which round to the `precision` ini setting (14 digits by default). That hides small errors but also drops real digits. For money and other exact values, read the number as a string from the request or the database.
 :::
+
+## Floats with all their digits
+
+When a float is all you have, `createFromFloat()` keeps every digit needed to get the same float back, independent of ini settings:
+
+```php
+echo Decimal::create(1234567890.1234567);          // 1234567890.1235
+echo Decimal::createFromFloat(1234567890.1234567); // 1234567890.1234567
+
+echo Decimal::create(0.1 + 0.2);          // 0.3
+echo Decimal::createFromFloat(0.1 + 0.2); // 0.30000000000000004
+```
+
+The second pair shows the trade: the result is what the float really holds, including its error.
+
+## Zero and one
+
+```php
+$total = Decimal::zero();
+$factor = Decimal::one();
+```
+
+> [!TIP] Added in 1.4
+> `createFromFloat()`, `zero()` and `one()`.
 
 ::: info Exponent limit
 Exponents beyond `Decimal::MAX_EXPONENT` (10000 in either direction) throw an `InvalidArgumentException`. Without a limit, the twelve characters of `'1e1000000000'` would expand to a string of a billion digits. A subclass can redefine the constant.
