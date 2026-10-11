@@ -80,6 +80,49 @@ echo Decimal::create('-23.44')->absolute(); // 23.44
 echo Decimal::create('23.44')->negate();    // -23.44
 ```
 
+## Moving the decimal point
+
+`shift()` multiplies by a power of ten without touching the digits. Use it to convert between units, such as an amount and its cents:
+
+```php
+echo Decimal::create('19.99')->shift(2);  // 1999
+echo Decimal::create('1999')->shift(-2);  // 19.99
+echo Decimal::create('12.34')->shift(-3); // 0.01234
+```
+
+## Several values at once
+
+```php
+echo Decimal::sum(['1.5', 2, Decimal::create('3.25')]); // 6.75
+echo Decimal::average(['1', '2', '4'], 2);              // 2.33
+echo Decimal::min(['2.5', '-1', 7]);                    // -1
+echo Decimal::max(['2.5', '-1', 7]);                    // 7
+```
+
+All four take any iterable. `sum()` of nothing is `0`. `average()`, `min()` and `max()` throw an `InvalidArgumentException` for an empty list. `average()` needs the scale for the same reason `divide()` does, and cuts off there.
+
+## Splitting an amount
+
+Dividing an amount and rounding each share rarely adds up to the original. `split()` and `allocate()` hand out every smallest unit:
+
+```php
+$shares = Decimal::create('100.00')->split(3);
+// 33.34, 33.33, 33.33
+
+$shares = Decimal::create('100.00')->allocate([70, 30]);
+// 70.00, 30.00
+
+$shares = Decimal::create('10.00')->allocate(['rent' => 2, 'food' => 1]);
+// ['rent' => 6.67, 'food' => 3.33]
+```
+
+The shares always sum to the original value. They have its scale, which also sets the smallest unit: `10` splits into `4, 3, 3`. What is left after the even division goes to the first shares, one unit each. Keys of the ratio array are kept, and a ratio of `0` receives nothing.
+
+Ratios can be integers or decimals such as `'0.7'` and `'0.3'`. Negative ratios, an empty list and ratios that sum to zero throw an `InvalidArgumentException`.
+
+> [!TIP] Added in 1.4
+> `shift()`, `sum()`, `average()`, `min()`, `max()`, `split()` and `allocate()`.
+
 ## Chaining
 
 ```php
