@@ -176,9 +176,8 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Returns a Decimal instance from the given value.
      *
-     * If the value is already a Decimal instance, then (since immutable) return it unmodified.
-     * Otherwise, create a new Decimal instance from the given value and return
-     * it.
+     * If the value is already an instance of this class and no scale is supplied,
+     * return a clone. Otherwise, construct a new instance from the value.
      *
      * @param object|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
@@ -351,7 +350,7 @@ class Decimal implements JsonSerializable, Stringable
      * @param self|string|float|int $value
      *
      * @return bool TRUE if this decimal is considered equal to the given value.
-     *  Equal decimal values tie-break on precision.
+     *  Trailing zeros do not affect equality.
      */
     public function equals(self|string|float|int $value): bool
     {
@@ -449,7 +448,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Return an appropriate scale for an arithmetic operation on two Decimals.
      *
-     * If $scale is specified and is a valid positive integer, return it.
+     * If $scale is specified, return it, including zero.
      * Otherwise, return the higher of the scales of the operands.
      *
      * @param self $a
@@ -543,7 +542,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * Returns if truly zero.
+     * Returns whether the value is zero.
      *
      * @return bool
      */
@@ -553,7 +552,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * Returns if truly negative (not zero).
+     * Returns whether the value is negative.
      *
      * @return bool
      */
@@ -563,7 +562,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * Returns if truly positive (not zero).
+     * Returns whether the value is positive.
      *
      * @return bool
      */

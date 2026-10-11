@@ -6,6 +6,6 @@ To preview the site locally:
 
 ```sh
 cd docs
-npm install
+npm ci
 npm run docs:dev
 ```

@@ -4,7 +4,7 @@ This library is one way to handle decimals in PHP. Depending on the project anot
 
 | Library | Notes |
 | --- | --- |
-| [php-decimal](https://php-decimal.github.io/) | A PHP extension. Faster, and it supports the arithmetic operators, but it has to be installed on every server. Works with precision (significant digits) where this library works with scale. |
+| [php-decimal](https://php-decimal.github.io/) | A PHP extension with arithmetic operators, installed separately on each server. Works with precision (significant digits) where this library works with scale. |
 | [brick/math](https://github.com/brick/math) | `BigDecimal`, `BigInteger` and `BigRational` with several calculation engines and more rounding modes. |
 | [brick/money](https://github.com/brick/money), [moneyphp/money](https://github.com/moneyphp/money) | Money with currencies, allocation and formatting. Choose one of these when you need currency handling and not only a number. |
 
@@ -16,9 +16,16 @@ This library is one way to handle decimals in PHP. Depending on the project anot
 | `abs()` | `absolute()` |
 | `signum()` | `sign()` |
 | `sub()`, `mul()`, `div()` | `subtract()`, `multiply()`, `divide()` |
+| `shift()`, `isEven()`, `isOdd()` | Same method names |
+| `toFixed($places)` | `(string)$decimal->withScale($places)` |
+| `Decimal::sum()` | `Decimal::sum()` |
+| `Decimal::avg()` | `Decimal::average($values, $scale)` |
 | Precision as significant digits | Scale as decimal places |
 
-Not available here: `rem()`, `shift()`, `ln()`, `exp()`, `log10()`, `parity()`, `isEven()`, `isOdd()`, `toFixed()`, `Decimal::sum()` and `Decimal::avg()`.
+There are no methods named `rem()`, `ln()`, `exp()`, `log10()` or `parity()` here.
+For a quotient and remainder, use [`divideWithRemainder()`](../guide/arithmetic#quotient-and-remainder).
+Precision and scale differ between the libraries, so review rounding and division
+when migrating calculations.
 
 ## History
 

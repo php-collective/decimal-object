@@ -1,5 +1,7 @@
 # Getting started
 
+Complete [Installation](./installation) first.
+
 Floats cannot represent most decimal fractions exactly:
 
 ```php
@@ -9,14 +11,21 @@ var_dump(0.1 + 0.2 - 0.3);   // float(5.551115123125783E-17)
 
 `Decimal` stores the number as a string of digits and calculates with bcmath, so the result is the one you would get on paper:
 
-```php
+Save this as `example.php` in the directory containing `composer.json`:
+
+```php [example.php]
+<?php
+require __DIR__ . '/vendor/autoload.php';
+
 use PhpCollective\DecimalObject\Decimal;
 
 $sum = Decimal::create('0.1')->add('0.2');
 
-echo $sum;                  // 0.3
+echo $sum, PHP_EOL;           // 0.3
 var_dump($sum->equals('0.3')); // bool(true)
 ```
+
+Run `php example.php`. Later snippets use the same Composer autoloader and `Decimal` import.
 
 ## Immutability
 
