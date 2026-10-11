@@ -424,7 +424,7 @@ class Decimal implements JsonSerializable, Stringable
     public function compareTo(self|string|float|int $value): int
     {
         $decimal = static::create($value);
-        $scale = max($this->scale(), $decimal->scale());
+        $scale = max($this->scale(), $decimal->scale(), strlen($this->fractionalPart), strlen($decimal->fractionalPart));
 
         return bccomp((string)$this, (string)$decimal, $scale);
     }
