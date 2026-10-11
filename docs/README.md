@@ -11,7 +11,8 @@ The value objects are immutable, always assign them when running modifications o
 You can create the value object from
 - string
 - integer
-- float (careful)
+- float
+- object that implements Stringable (and numeric `toString()` method)
 
 ```php
 use PhpCollective\DecimalObject\Decimal;
@@ -35,7 +36,7 @@ Transformation:
 These return a new object:
 - `absolute()`: Returns the absolute (positive) value of this decimal.
 - `negate()`: Returns the negation (positive if negative and vice versa).
-- `trim()`: Remove trailing zeros after the comma (same value, but different semantic meaning in term of precision/scale).
+- `trim()`: Remove trailing zeros after the comma (same value, but different semantic meaning in terms of precision/scale).
 
 There is only one static method and acts as a convenience wrapper to create an object:
 - `create()`: Internally does `new Decimal($value)`, allows for easier chaining without need of `()` wrapping.
@@ -78,6 +79,26 @@ $decimalAdded = $decimalOne->add($decimalTwo); // Now '3.3'
 ```
 
 Note that due to immutability `$decimalOne` is not modified here. The re-assignment is necessary for the operation to persist.
+
+### Precision/Scale
+Operations like `add()` use the higher one of the scales of the operands.
+If both are the same, they would also stay the same.
+
+With other operations like `multiply()`, the scale would be the addition of both operands' scale by default:
+```php
+$decimalOne = Decimal::create('1.55');
+$decimalTwo = Decimal::create('2.00');
+
+echo $decimalOne->multiply($decimalTwo); // Prints '3.1000'
+```
+
+To produce a result with a different number of decimal places, provide a value for the `$scale` parameter:
+```php
+$decimalOne = Decimal::create('1.55');
+$decimalTwo = Decimal::create('2.00');
+
+echo $decimalOne->multiply($decimalTwo, 2); // Prints '3.10'
+```
 
 
 ## Contributing
