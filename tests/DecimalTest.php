@@ -1748,8 +1748,283 @@ class DecimalTest extends TestCase
             $this->assertSame('1e3', (new Decimal('1000'))->toScientific());
             $this->assertSame(PHP_INT_MAX, (new Decimal((string)PHP_INT_MAX))->toInt());
             $this->assertTrue((new Decimal('4'))->isEven());
+            $this->assertSame('0.67', (string)(new Decimal('2'))->divide('3', 2, Decimal::ROUND_HALF_UP));
+            $this->assertSame('1.05', (string)(new Decimal('1.03'))->roundToStep('0.05'));
+            $this->assertSame(['3', '1'], array_map('strval', (new Decimal('7'))->divideWithRemainder(2)));
         } finally {
             bcscale($previous);
         }
+    }
+
+    /**
+     * @param string $a
+     * @param string $b
+     * @param int $scale
+     * @param int $mode
+     * @param string $expected
+     *
+     * @return void
+     */
+    #[DataProvider('divideRoundedProvider')]
+    public function testDivideRounded(string $a, string $b, int $scale, int $mode, string $expected): void
+    {
+        $result = (new Decimal($a))->divide($b, $scale, $mode);
+
+        $this->assertSame($expected, (string)$result);
+        $this->assertSame($scale, $result->scale());
+    }
+
+    /**
+     * @return array
+     */
+    public static function divideRoundedProvider(): array
+    {
+        return [
+            'half up' => ['2', '3', 2, Decimal::ROUND_HALF_UP, '0.67'],
+            'half up below' => ['1', '3', 2, Decimal::ROUND_HALF_UP, '0.33'],
+            'half up negative' => ['-2', '3', 2, Decimal::ROUND_HALF_UP, '-0.67'],
+            'both negative' => ['-2', '-3', 2, Decimal::ROUND_HALF_UP, '0.67'],
+            'exact pads' => ['1', '4', 4, Decimal::ROUND_HALF_UP, '0.2500'],
+            'tie half up' => ['1', '8', 2, Decimal::ROUND_HALF_UP, '0.13'],
+            'tie half down' => ['1', '8', 2, Decimal::ROUND_HALF_DOWN, '0.12'],
+            'tie half even' => ['1', '8', 2, Decimal::ROUND_HALF_EVEN, '0.12'],
+            'tie half even up' => ['3', '8', 2, Decimal::ROUND_HALF_EVEN, '0.38'],
+            'tie half odd' => ['1', '8', 2, Decimal::ROUND_HALF_ODD, '0.13'],
+            'up' => ['1', '3', 2, Decimal::ROUND_UP, '0.34'],
+            'down' => ['2', '3', 2, Decimal::ROUND_DOWN, '0.66'],
+            'floor negative' => ['-1', '3', 2, Decimal::ROUND_FLOOR, '-0.34'],
+            'ceil negative' => ['-2', '3', 2, Decimal::ROUND_CEIL, '-0.66'],
+            'ceil positive' => ['1', '3', 2, Decimal::ROUND_CEIL, '0.34'],
+            'to integer' => ['7', '2', 0, Decimal::ROUND_HALF_UP, '4'],
+            'to integer even' => ['5', '2', 0, Decimal::ROUND_HALF_EVEN, '2'],
+            'decimal operands' => ['19.99', '0.3', 3, Decimal::ROUND_HALF_UP, '66.633'],
+            'small to zero' => ['-0.001', '3', 2, Decimal::ROUND_HALF_UP, '0.00'],
+            'carry' => ['9.999', '1', 2, Decimal::ROUND_HALF_UP, '10.00'],
+            'large' => ['100000000000000000000', '3', 1, Decimal::ROUND_HALF_UP, '33333333333333333333.3'],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testDivideWithoutModeCutsOff(): void
+    {
+        $this->assertSame('0.66', (string)(new Decimal('2'))->divide('3', 2));
+        $this->assertSame('0.66', (string)(new Decimal('2'))->divide('3', 2, null));
+    }
+
+    /**
+     * @return void
+     */
+    public function testDivideRoundedInvalidMode(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new Decimal('2'))->divide('3', 2, PHP_ROUND_HALF_EVEN);
+    }
+
+    /**
+     * @return void
+     */
+    public function testDivideRoundedNegativeScale(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new Decimal('2'))->divide('3', -1, Decimal::ROUND_HALF_UP);
+    }
+
+    /**
+     * @return void
+     */
+    public function testDivideRoundedByZero(): void
+    {
+        $this->expectException(DivisionByZeroError::class);
+
+        (new Decimal('2'))->divide('0.0', 2, Decimal::ROUND_HALF_UP);
+    }
+
+    /**
+     * @param string $a
+     * @param string $b
+     * @param string $quotient
+     * @param string $remainder
+     *
+     * @return void
+     */
+    #[DataProvider('divideWithRemainderProvider')]
+    public function testDivideWithRemainder(string $a, string $b, string $quotient, string $remainder): void
+    {
+        $decimal = new Decimal($a);
+        [$q, $r] = $decimal->divideWithRemainder($b);
+
+        $this->assertSame($quotient, (string)$q);
+        $this->assertSame($remainder, (string)$r);
+        $this->assertTrue($q->multiply($b)->add($r)->equals($decimal));
+    }
+
+    /**
+     * @return array
+     */
+    public static function divideWithRemainderProvider(): array
+    {
+        return [
+            'integers' => ['7', '2', '3', '1'],
+            'exact' => ['8', '2', '4', '0'],
+            'negative dividend' => ['-7', '2', '-3', '-1'],
+            'negative divisor' => ['7', '-2', '-3', '1'],
+            'decimal divisor' => ['10', '0.3', '33', '0.1'],
+            'decimal dividend' => ['10.50', '3', '3', '1.50'],
+            'smaller than divisor' => ['1.5', '2', '0', '1.5'],
+            'zero' => ['0.00', '3', '0', '0.00'],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testDivideWithRemainderByZero(): void
+    {
+        $this->expectException(DivisionByZeroError::class);
+
+        (new Decimal('2'))->divideWithRemainder(0);
+    }
+
+    /**
+     * @param string $value
+     * @param string $step
+     * @param int $mode
+     * @param string $expected
+     *
+     * @return void
+     */
+    #[DataProvider('roundToStepProvider')]
+    public function testRoundToStep(string $value, string $step, int $mode, string $expected): void
+    {
+        $this->assertSame($expected, (string)(new Decimal($value))->roundToStep($step, $mode));
+    }
+
+    /**
+     * @return array
+     */
+    public static function roundToStepProvider(): array
+    {
+        return [
+            'cash down' => ['1.02', '0.05', Decimal::ROUND_HALF_UP, '1.00'],
+            'cash up' => ['1.03', '0.05', Decimal::ROUND_HALF_UP, '1.05'],
+            'cash tie' => ['1.025', '0.05', Decimal::ROUND_HALF_UP, '1.05'],
+            'cash tie even' => ['1.025', '0.05', Decimal::ROUND_HALF_EVEN, '1.00'],
+            'cash negative' => ['-1.03', '0.05', Decimal::ROUND_HALF_UP, '-1.05'],
+            'exact' => ['1.10', '0.05', Decimal::ROUND_UP, '1.10'],
+            'up' => ['1.01', '0.05', Decimal::ROUND_UP, '1.05'],
+            'floor' => ['1.09', '0.05', Decimal::ROUND_FLOOR, '1.05'],
+            'quarter' => ['7.4', '0.25', Decimal::ROUND_HALF_UP, '7.50'],
+            'integer step' => ['17', '5', Decimal::ROUND_HALF_UP, '15'],
+            'integer step tie' => ['17.5', '5', Decimal::ROUND_HALF_UP, '20'],
+            'to zero' => ['0.02', '0.05', Decimal::ROUND_HALF_UP, '0.00'],
+        ];
+    }
+
+    /**
+     * @param string $step
+     *
+     * @return void
+     */
+    #[DataProvider('roundToStepInvalidProvider')]
+    public function testRoundToStepInvalid(string $step): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new Decimal('1.02'))->roundToStep($step);
+    }
+
+    /**
+     * @return array
+     */
+    public static function roundToStepInvalidProvider(): array
+    {
+        return [
+            'zero' => ['0'],
+            'negative' => ['-0.05'],
+        ];
+    }
+
+    /**
+     * @param float $value
+     * @param string $expected
+     *
+     * @return void
+     */
+    #[DataProvider('createFromFloatProvider')]
+    public function testCreateFromFloat(float $value, string $expected): void
+    {
+        $decimal = Decimal::createFromFloat($value);
+
+        $this->assertSame($expected, (string)$decimal);
+        $this->assertSame($value, (float)(string)$decimal);
+    }
+
+    /**
+     * @return array
+     */
+    public static function createFromFloatProvider(): array
+    {
+        return [
+            'simple' => [1.1, '1.1'],
+            'integer' => [5.0, '5'],
+            'negative' => [-23.44, '-23.44'],
+            'zero' => [0.0, '0'],
+            'beyond precision ini' => [1234567890.1234567, '1234567890.1234567'],
+            'sum error visible' => [0.1 + 0.2, '0.30000000000000004'],
+            'small' => [1.5e-7, '0.00000015'],
+            'large' => [1e25, '10000000000000000000000000'],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testCreateFromFloatCommaLocale(): void
+    {
+        $previous = (string)setlocale(LC_NUMERIC, '0');
+        if (setlocale(LC_NUMERIC, 'de_DE.UTF-8', 'de_DE.utf8', 'de_DE') === false) {
+            $this->markTestSkipped('No locale with a decimal comma installed.');
+        }
+
+        try {
+            $this->assertSame('1.1', (string)Decimal::createFromFloat(1.1));
+        } finally {
+            setlocale(LC_NUMERIC, $previous);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    public function testCreateFromFloatNonFinite(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        Decimal::createFromFloat(INF);
+    }
+
+    /**
+     * @return void
+     */
+    public function testZeroAndOne(): void
+    {
+        $this->assertSame('0', (string)Decimal::zero());
+        $this->assertSame('1', (string)Decimal::one());
+        $this->assertTrue(Decimal::zero()->isZero());
+    }
+
+    /**
+     * @return void
+     */
+    public function testAllocateWithZeroScaleDeclared(): void
+    {
+        $decimal = new Decimal('1.5', 0);
+        $shares = $decimal->split(2);
+
+        $this->assertSame(['1', '0'], array_map('strval', $shares));
     }
 }
