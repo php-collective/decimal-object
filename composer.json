@@ -27,8 +27,7 @@
     },
     "require": {
         "php": ">=8.2",
-        "ext-bcmath": "*",
-        "ext-json": "*"
+        "ext-bcmath": "*"
     },
     "require-dev": {
         "php-collective/code-sniffer": "^0.6.8",
@@ -54,7 +53,8 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-master": "1.x-dev"
+            "dev-master": "1.x-dev",
+            "dev-next": "2.x-dev"
         }
     },
     "scripts": {

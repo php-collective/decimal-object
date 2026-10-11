@@ -16,6 +16,7 @@ use InvalidArgumentException;
 use PhpCollective\DecimalObject\Decimal;
 use PhpCollective\DecimalObject\Exception\DecimalException;
 use PhpCollective\DecimalObject\Exception\DivisionByZeroException;
+use PhpCollective\DecimalObject\Exception\InvalidArgumentException as DecimalInvalidArgumentException;
 use PhpCollective\DecimalObject\Exception\InvalidNumberException;
 use PhpCollective\DecimalObject\Exception\NegativeNumberException;
 use PhpCollective\DecimalObject\Exception\OverflowException;
@@ -2494,5 +2495,19 @@ class DecimalTest extends TestCase
         }
 
         $this->assertSame(count($cases), count(constant('RoundingMode::HalfEven')::cases()));
+    }
+
+    /**
+     * The types list `float` so that PHP does not turn 2.5 into 2 for callers not using strict types.
+     *
+     * @return void
+     */
+    public function testFloatOperandsAreRejectedWithoutStrictTypes(): void
+    {
+        $result = require __DIR__ . '/data/float_operands.php';
+
+        $expected = DecimalInvalidArgumentException::class;
+
+        $this->assertSame(['mod' => $expected, 'pow' => $expected], $result);
     }
 }
