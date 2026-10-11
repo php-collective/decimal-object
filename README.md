@@ -39,13 +39,12 @@ var_dump($total->equals('0.3')); // bool(true)
 - Arithmetic, rounding, comparison and conversion.
 - Immutable.
 - Handles numbers beyond the integer and float range.
-- No custom PHP extension, only `bcmath`.
+- Calculates with PHP's `bcmath` extension.
 
 ## Installation
 
-```
-composer require php-collective/decimal-object
-```
+Follow [Installation](https://php-collective.github.io/decimal-object/guide/installation)
+to install the package and enable bcmath for the PHP process that runs it.
 
 Requires PHP 8.2+ and the `bcmath` extension. The 1.x API is maintained in the 1.4 releases, see [Upgrading](https://php-collective.github.io/decimal-object/reference/upgrading) for the changes. PHP 8.1 is covered by the 1.3 releases. For anything older, use the [legacy library](https://github.com/spryker/decimal-object).
 
