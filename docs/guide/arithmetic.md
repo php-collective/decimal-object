@@ -1,6 +1,6 @@
 # Arithmetic
 
-Every operand can be a `Decimal`, a numeric string, an integer or a float. The result is always a new `Decimal`.
+Every operand can be a `Decimal`, a numeric string or an integer. The result is always a new `Decimal`.
 
 ```php
 use PhpCollective\DecimalObject\Decimal;
@@ -8,44 +8,63 @@ use PhpCollective\DecimalObject\Decimal;
 $a = Decimal::create('1.50');
 ```
 
+## Exact by default
+
+No operation drops a digit on its own. Addition, subtraction and multiplication return the exact result. Where the exact result cannot be written down, as in most divisions, you say how to round. If you do not, the call throws a `RoundingNecessaryException`.
+
+> [!TIP] Changed in 2.0
+> Results used to be cut off at the scale without notice. See [Upgrading](../reference/upgrading#from-1-x-to-2-0).
+
 ## Add and subtract
 
 ```php
-echo $a->add('2.125');                    // 3.625
+echo $a->add('2.125');                      // 3.625
 echo Decimal::create('5')->subtract('7.5'); // -2.5
 ```
 
-The result has the larger scale of the two operands.
+The result has the larger scale of the two operands, which is always exact.
 
 ## Multiply
 
 ```php
-echo Decimal::create('1.55')->multiply('2.00');    // 3.1000
-echo Decimal::create('1.55')->multiply('2.00', 2); // 3.10
+echo Decimal::create('1.55')->multiply('2.00'); // 3.1000
 ```
 
-Without a scale argument the scales of both operands are added, which is always enough to hold the exact product.
+The scales of both operands are added, which is always enough to hold the exact product.
+
+## Asking for a scale
+
+`add()`, `subtract()`, `multiply()` and `mod()` take a scale as second argument and a [rounding mode](./rounding#rounding-modes) as third:
+
+```php
+echo Decimal::create('1.55')->multiply('2.00', 2);                         // 3.10
+echo Decimal::create('19.99')->multiply('0.19', 2, Decimal::ROUND_HALF_UP); // 3.80
+```
+
+The first line needs no mode because only zeros are dropped. The second would throw without one, since `3.7981` does not fit two decimals.
 
 ## Divide
 
 `divide()` requires the scale, because a quotient can have endless decimals:
 
 ```php
-echo Decimal::create('10')->divide('3', 4); // 3.3333
-echo Decimal::create('2')->divide('3', 2);  // 0.66
+echo Decimal::create('10')->divide('4', 2); // 2.50
 ```
 
-The result is cut off at the scale, not rounded. Pass a rounding mode as third argument to round it:
+That quotient fits. Most do not, and then a rounding mode is needed:
 
 ```php
-echo Decimal::create('2')->divide('3', 2, Decimal::ROUND_HALF_UP);   // 0.67
-echo Decimal::create('1')->divide('8', 2, Decimal::ROUND_HALF_EVEN); // 0.12
+Decimal::create('10')->divide('3', 4);
+// RoundingNecessaryException: The result does not fit the scale.
+
+echo Decimal::create('10')->divide('3', 4, Decimal::ROUND_HALF_UP); // 3.3333
+echo Decimal::create('2')->divide('3', 2, Decimal::ROUND_HALF_UP);  // 0.67
+echo Decimal::create('2')->divide('3', 2, Decimal::ROUND_DOWN);     // 0.66
 ```
 
-The rounding is decided on the exact quotient. All [rounding modes](./rounding#rounding-modes) work here at the scale, including floor and ceil.
+The rounding is decided on the exact quotient, so ties are detected correctly at any scale. `ROUND_DOWN` gives the cut-off result of earlier versions.
 
-> [!TIP] Added in 1.4
-> The rounding mode argument. Without it `divide()` cuts off as before.
+Dividing by zero throws a `DivisionByZeroException`.
 
 ### Quotient and remainder
 
@@ -61,10 +80,6 @@ The rounding is decided on the exact quotient. All [rounding modes](./rounding#r
 
 The quotient is cut off towards zero, so the remainder has the sign of the value, like `mod()`: `-7` by `2` gives `-3` and `-1`. Quotient times divisor plus remainder always equals the value.
 
-> [!TIP] Added in 1.4
-
-Dividing by zero throws a `DivisionByZeroError`.
-
 ## Modulo
 
 ```php
@@ -73,23 +88,46 @@ echo Decimal::create('-7')->mod(2);     // -1
 echo Decimal::create('10')->mod('0.3'); // 0.1
 ```
 
-The sign follows the left operand, as with PHP's `%`. The result has the larger scale of both operands. A zero operand throws a `DivisionByZeroError`.
+The sign follows the left operand, as with PHP's `%`. The result has the larger scale of both operands. A zero operand throws a `DivisionByZeroException`.
 
-## Power and square root
+## Power
 
 ```php
-echo Decimal::create('8')->pow(2);       // 64
-echo Decimal::create('1.5')->pow(2);     // 2.2
-echo Decimal::create('1.5')->pow(2, 2);  // 2.25
-echo Decimal::create('2')->pow(-1, 2);   // 0.50
-
-echo Decimal::create('18')->sqrt();      // 4
-echo Decimal::create('18')->sqrt(5);     // 4.24264
+echo Decimal::create('8')->pow(2);   // 64
+echo Decimal::create('1.5')->pow(2); // 2.25
+echo Decimal::create('1.5')->pow(3); // 3.375
 ```
 
-Both default to the scale of the value they are called on and cut off further digits, so pass a scale when the result needs more decimals than the input has.
+A positive exponent gives the exact result. Pass a scale and a mode to shorten it:
 
-The exponent of `pow()` must be a whole number, and `sqrt()` of a negative value is not defined. bcmath reports both with a `ValueError`.
+```php
+echo Decimal::create('1.5')->pow(2, 1, Decimal::ROUND_HALF_UP); // 2.3
+```
+
+A negative exponent is a division. It uses the scale you pass, or the scale of the value, and needs a mode unless the result fits:
+
+```php
+echo Decimal::create('2')->pow(-1, 2);                         // 0.50
+echo Decimal::create('3')->pow(-1, 4, Decimal::ROUND_HALF_UP); // 0.3333
+```
+
+The exponent must be a whole number between -10000 and 10000 (`Decimal::MAX_EXPONENT`). Anything else throws an `InvalidArgumentException`.
+
+## Square root
+
+```php
+echo Decimal::create('64')->sqrt();   // 8
+echo Decimal::create('2.25')->sqrt(); // 1.50
+```
+
+The result has the scale of the value unless you pass one. A root that does not fit needs a mode:
+
+```php
+echo Decimal::create('18')->sqrt(5, Decimal::ROUND_HALF_UP); // 4.24264
+echo Decimal::create('18')->sqrt(3, Decimal::ROUND_HALF_UP); // 4.243
+```
+
+A negative value throws a `NegativeNumberException`.
 
 ## Sign
 
@@ -111,13 +149,14 @@ echo Decimal::create('12.34')->shift(-3); // 0.01234
 ## Several values at once
 
 ```php
-echo Decimal::sum(['1.5', 2, Decimal::create('3.25')]); // 6.75
-echo Decimal::average(['1', '2', '4'], 2);              // 2.33
-echo Decimal::min(['2.5', '-1', 7]);                    // -1
-echo Decimal::max(['2.5', '-1', 7]);                    // 7
+echo Decimal::sum(['1.5', 2, Decimal::create('3.25')]);             // 6.75
+echo Decimal::average(['1', '2', '3'], 2);                          // 2.00
+echo Decimal::average(['1', '2', '4'], 2, Decimal::ROUND_HALF_UP);  // 2.33
+echo Decimal::min(['2.5', '-1', 7]);                                // -1
+echo Decimal::max(['2.5', '-1', 7]);                                // 7
 ```
 
-All four take any iterable. `sum()` of nothing is `0`. `average()`, `min()` and `max()` throw an `InvalidArgumentException` for an empty list. `average()` needs the scale for the same reason `divide()` does, and cuts off there.
+All four take any iterable. `sum()` of nothing is `0`. `average()`, `min()` and `max()` throw an `InvalidArgumentException` for an empty list. `average()` is a division: it needs the scale, and a mode when the mean does not fit.
 
 ## Splitting an amount
 
@@ -137,9 +176,6 @@ $shares = Decimal::create('10.00')->allocate(['rent' => 2, 'food' => 1]);
 The shares always sum to the original value. They have its scale, which also sets the smallest unit: `10` splits into `4, 3, 3`. What is left after the even division goes to the first shares, one unit each. Keys of the ratio array are kept, and a ratio of `0` receives nothing.
 
 Ratios can be integers or decimals such as `'0.7'` and `'0.3'`. Negative ratios, an empty list and ratios that sum to zero throw an `InvalidArgumentException`.
-
-> [!TIP] Added in 1.4
-> `shift()`, `sum()`, `average()`, `min()`, `max()`, `split()` and `allocate()`.
 
 ## Chaining
 

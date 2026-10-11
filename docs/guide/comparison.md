@@ -16,7 +16,7 @@ var_dump($value->greaterThanOrEquals('1.5')); // bool(true)
 var_dump($value->lessThanOrEquals('1.5'));    // bool(true)
 ```
 
-Each method accepts a `Decimal`, a numeric string, an integer or a float.
+Each method accepts a `Decimal`, a numeric string or an integer.
 
 `compareTo()` returns `-1`, `0` or `1` and fits `usort()`:
 

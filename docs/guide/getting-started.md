@@ -42,18 +42,18 @@ if ($gross->greaterThan('20')) {
 }
 ```
 
-`multiply()` returned `3.7981` here, with the scales of both operands added up. `round(2)` brings it back to two decimal places. [Precision and scale](./scale) explains the rules for each operation.
+`multiply()` returned the exact product `3.7981` here, with the scales of both operands added up. `round(2)` brings it back to two decimal places. Nothing is rounded unless you ask for it. [Precision and scale](./scale) explains the rules for each operation.
 
 ## Use strings for input
 
-Pass decimal strings whenever you can. A float has already lost digits before the object sees it:
+Pass decimal strings. A float has usually lost digits before the object could see it, so floats are rejected:
 
 ```php
-echo Decimal::create('1234567890.1234567'); // 1234567890.1234567
-echo Decimal::create(1234567890.1234567);   // 1234567890.1235
+Decimal::create(19.90);   // InvalidArgumentException
+Decimal::create('19.90'); // 19.90
 ```
 
-See [Creating decimals](./creating) for all accepted input.
+See [Creating decimals](./creating) for all accepted input and for converting a float on purpose.
 
 ## Where to go next
 

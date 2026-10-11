@@ -11,12 +11,19 @@ namespace PhpCollective\DecimalObject\Test;
 
 use ArrayIterator;
 use DivisionByZeroError;
+use DomainException;
 use InvalidArgumentException;
 use PhpCollective\DecimalObject\Decimal;
+use PhpCollective\DecimalObject\Exception\DecimalException;
+use PhpCollective\DecimalObject\Exception\DivisionByZeroException;
+use PhpCollective\DecimalObject\Exception\InvalidNumberException;
+use PhpCollective\DecimalObject\Exception\NegativeNumberException;
+use PhpCollective\DecimalObject\Exception\OverflowException;
+use PhpCollective\DecimalObject\Exception\RoundingNecessaryException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Stringable;
-use TypeError;
 
 class DecimalTest extends TestCase
 {
@@ -108,12 +115,12 @@ class DecimalTest extends TestCase
         };
 
         return [
-            [1.1, '1.1'],
+            ['1.1', '1.1'],
             [-23, '-23'],
             [50, '50'],
             [-25000, '-25000'],
-            [0.00001, '0.00001'],
-            [-0.000003, '-0.000003'],
+            ['0.00001', '0.00001'],
+            ['-0.000003', '-0.000003'],
             ['.0189', '0.0189'],
             ['-.3', '-0.3'],
             ['-5.000067', '-5.000067'],
@@ -213,11 +220,11 @@ class DecimalTest extends TestCase
     {
         return [
             [5, true],
-            [0.00001, false],
-            [-0.000003, false],
+            ['0.00001', false],
+            ['-0.000003', false],
             [Decimal::create('0'), true],
             [0, true],
-            [0.0, true],
+            ['0.0', true],
             ['0000', true],
             ['-0', true],
             ['+0', true],
@@ -245,11 +252,11 @@ class DecimalTest extends TestCase
     {
         return [
             [5, false],
-            [0.00001, false],
-            [-0.000003, false],
+            ['0.00001', false],
+            ['-0.000003', false],
             [Decimal::create('0'), true],
             [0, true],
-            [0.0, true],
+            ['0.0', true],
             ['0000', true],
             ['-0', true],
             ['+0', true],
@@ -291,7 +298,7 @@ class DecimalTest extends TestCase
             [0, 0],
             [1, 1],
             [-1, -1],
-            [0.0, 0],
+            ['0.0', 0],
             ['0', 0],
             ['1', 1],
             ['-1', -1],
@@ -409,30 +416,22 @@ class DecimalTest extends TestCase
     }
 
     /**
-     * @param string $value
-     *
      * @return void
      */
-    #[DataProvider('bigFloatDataProvider')]
-    public function testToFloatForBigDecimalThrowsAnException(string $value): void
+    public function testToFloatLongFraction(): void
     {
-        $decimal = Decimal::create($value);
-
-        $this->expectException(TypeError::class);
-        $this->expectExceptionMessage('Cannot cast Big Decimal to Float');
-
-        $decimal->toFloat();
+        $this->assertSame(0.12345678901234568, Decimal::create('0.12345678901234567890')->toFloat());
+        $this->assertSame(2.6922337203685477, Decimal::create('2.6' . PHP_INT_MAX)->toFloat());
     }
 
     /**
-     * @return array
+     * @return void
      */
-    public static function bigFloatDataProvider(): array
+    public function testToFloatOutOfRange(): void
     {
-        return [
-            'positive' => ['2.6' . PHP_INT_MAX],
-            'negative' => ['-2.6' . PHP_INT_MAX],
-        ];
+        $this->expectException(OverflowException::class);
+
+        Decimal::create('1e400')->toFloat();
     }
 
     /**
@@ -457,8 +456,7 @@ class DecimalTest extends TestCase
     {
         $decimal = Decimal::create($value);
 
-        $this->expectException(TypeError::class);
-        $this->expectExceptionMessage('Cannot cast Big Integer to Integer');
+        $this->expectException(OverflowException::class);
 
         $decimal->toInt();
     }
@@ -512,13 +510,13 @@ class DecimalTest extends TestCase
         $value = '18';
         $decimal = Decimal::create($value);
 
-        $result = $decimal->sqrt(5);
+        $result = $decimal->sqrt(5, Decimal::ROUND_DOWN);
         $this->assertSame('4.24264', (string)$result);
 
         $value = '18.000000';
         $decimal = Decimal::create($value);
 
-        $result = $decimal->sqrt();
+        $result = $decimal->sqrt(null, Decimal::ROUND_DOWN);
         $this->assertSame('4.242640', (string)$result);
     }
 
@@ -650,13 +648,13 @@ class DecimalTest extends TestCase
             ['12.364', 2, '12.36'],
             ['12.365', 2, '12.37'],
             ['-13.574', 0, '-14'],
-            [13.4999, 0, '13'],
-            [13.4999, 10, '13.4999000000'],
-            [13.4999, 2, '13.50'],
-            [0.0001, 0, '0'],
-            [-0.0001, 0, '0'],
-            [0.9999, 0, '1'],
-            [-0.9999, 0, '-1'],
+            ['13.4999', 0, '13'],
+            ['13.4999', 10, '13.4999000000'],
+            ['13.4999', 2, '13.50'],
+            ['0.0001', 0, '0'],
+            ['-0.0001', 0, '0'],
+            ['0.9999', 0, '1'],
+            ['-0.9999', 0, '-1'],
         ];
     }
 
@@ -708,8 +706,8 @@ class DecimalTest extends TestCase
             ['13.6999', '13'],
             ['13.1', '13'],
             ['13.9', '13'],
-            [0.0001, '0'],
-            [-0.0001, '-1'],
+            ['0.0001', '0'],
+            ['-0.0001', '-1'],
         ];
     }
 
@@ -760,8 +758,8 @@ class DecimalTest extends TestCase
             ['13.6999', '14'],
             ['13.1', '14'],
             ['13.9', '14'],
-            [0.0001, '1'],
-            [-0.0001, '0'],
+            ['0.0001', '1'],
+            ['-0.0001', '0'],
         ];
     }
 
@@ -882,7 +880,7 @@ class DecimalTest extends TestCase
     public function testMultiply(mixed $a, mixed $b, ?int $scale, string $expected): void
     {
         $decimal = Decimal::create($a);
-        $this->assertSame($expected, (string)$decimal->multiply($b, $scale));
+        $this->assertSame($expected, (string)$decimal->multiply($b, $scale, Decimal::ROUND_DOWN));
     }
 
     /**
@@ -921,7 +919,7 @@ class DecimalTest extends TestCase
     public function testMultiplyLegacy(mixed $a, mixed $b, ?int $scale, string $expected): void
     {
         $decimal = Decimal::create($a);
-        $this->assertSame($expected, (string)$decimal->multiply($b, $scale));
+        $this->assertSame($expected, (string)$decimal->multiply($b, $scale, Decimal::ROUND_DOWN));
     }
 
     /**
@@ -946,7 +944,7 @@ class DecimalTest extends TestCase
     public function testDivide(mixed $a, mixed $b, int $scale, string $expected): void
     {
         $decimal = Decimal::create($a);
-        $this->assertSame($expected, (string)$decimal->divide($b, $scale));
+        $this->assertSame($expected, (string)$decimal->divide($b, $scale, Decimal::ROUND_DOWN));
     }
 
     /**
@@ -1017,9 +1015,9 @@ class DecimalTest extends TestCase
     public function testPrecisionLoss(): void
     {
         $a = Decimal::create('0.123456789', 10);
-        $this->assertSame('0.123456789', (string)$a);
+        $this->assertSame('0.1234567890', (string)$a);
 
-        $b = Decimal::create((string)$a, 8);
+        $b = $a->withScale(8, Decimal::ROUND_DOWN);
         $this->assertSame('0.12345678', (string)$b);
     }
 
@@ -1028,16 +1026,16 @@ class DecimalTest extends TestCase
      */
     public function testPrecisionLossProtection(): void
     {
-        $a = Decimal::create('0.1', 50, true);
+        $a = Decimal::create('0.1', 50);
         $this->assertSame(50, $a->scale());
 
-        $b = Decimal::create($a, null, true);
+        $b = Decimal::create($a);
         $this->assertSame(50, $b->scale());
 
-        $c = Decimal::create($b, 6, true); // Not 50 if manually overwritten
+        $c = Decimal::create($b, 6); // Only zeros are dropped
         $this->assertSame(6, $c->scale());
 
-        $d = Decimal::create($c, 64, true);
+        $d = Decimal::create($c, 64);
         $this->assertSame(64, $d->scale());
     }
 
@@ -1046,10 +1044,9 @@ class DecimalTest extends TestCase
      */
     public function testPrecisionLossFail(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Loss of precision detected');
+        $this->expectException(RoundingNecessaryException::class);
 
-        Decimal::create('0.123', 2, true);
+        Decimal::create('0.123', 2);
     }
 
     /**
@@ -1090,9 +1087,6 @@ class DecimalTest extends TestCase
             'zero exponent' => ['1.5e0', '1.5'],
             'negative zero exponent' => ['-0e5', '0'],
             'zero mantissa' => ['0.0e-3', '0.0000'],
-            'large float' => [1e25, '10000000000000000000000000'],
-            'small float' => [1.5e-7, '0.00000015'],
-            'negative zero float' => [-0.0, '0'],
         ];
     }
 
@@ -1126,7 +1120,7 @@ class DecimalTest extends TestCase
      */
     public function testNewObjectZeroScale(): void
     {
-        $decimal = new Decimal('1.56', 0);
+        $decimal = new Decimal('1.00', 0);
         $this->assertSame('1', (string)$decimal);
         $this->assertSame(0, $decimal->scale());
     }
@@ -1134,12 +1128,11 @@ class DecimalTest extends TestCase
     /**
      * @return void
      */
-    public function testNewObjectZeroScaleStrict(): void
+    public function testNewObjectZeroScaleLosingDigits(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Loss of precision detected');
+        $this->expectException(RoundingNecessaryException::class);
 
-        new Decimal('1.56', 0, true);
+        new Decimal('1.56', 0);
     }
 
     /**
@@ -1159,7 +1152,7 @@ class DecimalTest extends TestCase
     {
         $this->assertSame('1.500', (string)new Decimal('1.5e0', 3));
         $this->assertSame('0.001200', (string)new Decimal('1.2e-3', 6));
-        $this->assertSame('0.0012', (string)new Decimal('1.23456e-3', 4));
+        $this->assertSame('1000.00', (string)new Decimal('1e3', 2));
     }
 
     /**
@@ -1175,7 +1168,7 @@ class DecimalTest extends TestCase
         $this->assertSame('0.00', (string)(new Decimal('0.00'))->negate());
         $this->assertSame('0', (string)(new Decimal('-0.5'))->truncate());
         $this->assertSame('0.0', (string)(new Decimal('-0.05'))->truncate(1));
-        $this->assertSame('0.00', (string)new Decimal('-0.001', 2));
+        $this->assertSame('0.00', (string)(new Decimal('-0.001'))->withScale(2));
         $this->assertFalse((new Decimal('-0.5'))->truncate()->isNegative());
     }
 
@@ -1302,7 +1295,7 @@ class DecimalTest extends TestCase
         $this->assertSame('1', (string)$decimal->mod(new Decimal('3')));
         $this->assertSame('0.1', (string)$decimal->mod('0.3'));
         $this->assertSame('1.5', (string)(new Decimal('10.5'))->mod('3'));
-        $this->assertSame('0', (string)$decimal->mod('0.3', 0));
+        $this->assertSame('0', (string)$decimal->mod('0.3', 0, Decimal::ROUND_DOWN));
     }
 
     /**
@@ -1315,7 +1308,8 @@ class DecimalTest extends TestCase
         $this->assertSame('100', (string)(new Decimal('10'))->pow('2e0'));
         $this->assertSame('4', (string)$decimal->pow(new Decimal('2')));
         $this->assertSame('0.50', (string)$decimal->pow(-1, 2));
-        $this->assertSame('2.25', (string)(new Decimal('1.50'))->pow(2));
+        $this->assertSame('2.2500', (string)(new Decimal('1.50'))->pow(2));
+        $this->assertSame('2.3', (string)(new Decimal('1.50'))->pow(2, 1, Decimal::ROUND_HALF_UP));
     }
 
     /**
@@ -1508,12 +1502,11 @@ class DecimalTest extends TestCase
     public function testTryCreate(): void
     {
         $this->assertSame('1.50', (string)Decimal::tryCreate('1.50'));
-        $this->assertSame('1.5', (string)Decimal::tryCreate('1.56', 1));
+        $this->assertSame('1.50', (string)Decimal::tryCreate('1.5', 2));
         $this->assertNull(Decimal::tryCreate(null));
         $this->assertNull(Decimal::tryCreate(''));
         $this->assertNull(Decimal::tryCreate('abc'));
         $this->assertNull(Decimal::tryCreate('1,5'));
-        $this->assertNull(Decimal::tryCreate(NAN));
     }
 
     /**
@@ -1532,7 +1525,7 @@ class DecimalTest extends TestCase
     public function testAverage(): void
     {
         $this->assertSame('2.00', (string)Decimal::average(['1', '2', '3'], 2));
-        $this->assertSame('0.333', (string)Decimal::average(['0', '0', '1'], 3));
+        $this->assertSame('0.333', (string)Decimal::average(['0', '0', '1'], 3, Decimal::ROUND_DOWN));
     }
 
     /**
@@ -1807,10 +1800,20 @@ class DecimalTest extends TestCase
     /**
      * @return void
      */
-    public function testDivideWithoutModeCutsOff(): void
+    public function testDivideExactNeedsNoMode(): void
     {
-        $this->assertSame('0.66', (string)(new Decimal('2'))->divide('3', 2));
-        $this->assertSame('0.66', (string)(new Decimal('2'))->divide('3', 2, null));
+        $this->assertSame('2.50', (string)(new Decimal('10'))->divide('4', 2));
+        $this->assertSame('0.66', (string)(new Decimal('2'))->divide('3', 2, Decimal::ROUND_DOWN));
+    }
+
+    /**
+     * @return void
+     */
+    public function testDivideInexactWithoutMode(): void
+    {
+        $this->expectException(RoundingNecessaryException::class);
+
+        (new Decimal('2'))->divide('3', 2);
     }
 
     /**
@@ -2018,13 +2021,478 @@ class DecimalTest extends TestCase
     }
 
     /**
+     * @param string $value
+     * @param int|null $scale
+     * @param string $expected
+     *
      * @return void
      */
-    public function testAllocateWithZeroScaleDeclared(): void
+    #[DataProvider('declaredScaleProvider')]
+    public function testStringShowsDeclaredScale(string $value, ?int $scale, string $expected): void
     {
-        $decimal = new Decimal('1.5', 0);
-        $shares = $decimal->split(2);
+        $decimal = new Decimal($value, $scale);
 
-        $this->assertSame(['1', '0'], array_map('strval', $shares));
+        $this->assertSame($expected, (string)$decimal);
+        $this->assertSame(strlen(explode('.', $expected . '.')[1]), $decimal->scale());
+    }
+
+    /**
+     * @return array
+     */
+    public static function declaredScaleProvider(): array
+    {
+        return [
+            'padded' => ['0.1', 4, '0.1000'],
+            'integer padded' => ['5', 2, '5.00'],
+            'detected' => ['0.10', null, '0.10'],
+            'zeros dropped' => ['0.1200', 2, '0.12'],
+            'all decimals dropped' => ['7.000', 0, '7'],
+            'scientific padded' => ['1.2e-3', 6, '0.001200'],
+            'negative zero padded' => ['-0', 2, '0.00'],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testDeclaredScaleCarriesThroughArithmetic(): void
+    {
+        $value = Decimal::create('0.1', 4);
+
+        $this->assertSame('0.3000', (string)$value->add('0.2'));
+        $this->assertSame('0.1', (string)$value->trim());
+        $this->assertSame('0.1000', (string)Decimal::create($value));
+        $this->assertSame('0.10', (string)Decimal::create($value, 2));
+        $this->assertSame('{"v":"0.1000"}', json_encode(['v' => $value]));
+    }
+
+    /**
+     * @param mixed $float
+     *
+     * @return void
+     */
+    #[DataProvider('floatProvider')]
+    public function testFloatIsRejected(mixed $float): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('createFromFloat');
+
+        new Decimal($float);
+    }
+
+    /**
+     * @return array
+     */
+    public static function floatProvider(): array
+    {
+        return [
+            'fraction' => [1.5],
+            'whole' => [2.0],
+            'nan' => [NAN],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testFloatOperandIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('createFromFloat');
+
+        (new Decimal('1'))->add(0.5);
+    }
+
+    /**
+     * @return void
+     */
+    public function testTryCreateDoesNotHideFloat(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        Decimal::tryCreate(1.5);
+    }
+
+    /**
+     * @param string $operation
+     * @param string $a
+     * @param string $b
+     * @param int|null $scale
+     * @param int $mode
+     * @param string $expected
+     *
+     * @return void
+     */
+    #[DataProvider('scaledArithmeticProvider')]
+    public function testArithmeticWithScale(string $operation, string $a, string $b, ?int $scale, int $mode, string $expected): void
+    {
+        $this->assertSame($expected, (string)(new Decimal($a))->$operation($b, $scale, $mode));
+    }
+
+    /**
+     * @return array
+     */
+    public static function scaledArithmeticProvider(): array
+    {
+        $none = Decimal::ROUND_UNNECESSARY;
+
+        return [
+            'add exact' => ['add', '0.15', '0.2', null, $none, '0.35'],
+            'add padded' => ['add', '0.15', '0.2', 4, $none, '0.3500'],
+            'add zeros dropped' => ['add', '0.15', '0.25', 1, $none, '0.4'],
+            'add rounded' => ['add', '0.15', '0.2', 1, Decimal::ROUND_HALF_UP, '0.4'],
+            'add cut off' => ['add', '0.15', '0.2', 1, Decimal::ROUND_DOWN, '0.3'],
+            'subtract rounded' => ['subtract', '1', '0.345', 2, Decimal::ROUND_HALF_EVEN, '0.66'],
+            'multiply exact' => ['multiply', '1.55', '2.00', null, $none, '3.1000'],
+            'multiply zeros dropped' => ['multiply', '1.55', '2.00', 2, $none, '3.10'],
+            'multiply rounded' => ['multiply', '19.99', '0.19', 2, Decimal::ROUND_HALF_UP, '3.80'],
+            'multiply cut off' => ['multiply', '19.99', '0.19', 2, Decimal::ROUND_DOWN, '3.79'],
+            'mod exact' => ['mod', '10', '0.3', null, $none, '0.1'],
+            'mod padded' => ['mod', '10', '3', 2, $none, '1.00'],
+            'mod cut off' => ['mod', '10', '0.3', 0, Decimal::ROUND_DOWN, '0'],
+        ];
+    }
+
+    /**
+     * @param string $operation
+     * @param string $a
+     * @param string $b
+     * @param int $scale
+     *
+     * @return void
+     */
+    #[DataProvider('lossyArithmeticProvider')]
+    public function testArithmeticRefusesToLoseDigits(string $operation, string $a, string $b, int $scale): void
+    {
+        $this->expectException(RoundingNecessaryException::class);
+
+        (new Decimal($a))->$operation($b, $scale);
+    }
+
+    /**
+     * @return array
+     */
+    public static function lossyArithmeticProvider(): array
+    {
+        return [
+            'add' => ['add', '0.15', '0.2', 1],
+            'subtract' => ['subtract', '1', '0.345', 2],
+            'multiply' => ['multiply', '19.99', '0.19', 2],
+            'mod' => ['mod', '10', '0.3', 0],
+            'divide' => ['divide', '1', '3', 5],
+            'pow' => ['pow', '1.5', '2', 1],
+            'pow negative' => ['pow', '3', '-1', 4],
+        ];
+    }
+
+    /**
+     * @param string $value
+     * @param string $exponent
+     * @param int|null $scale
+     * @param int $mode
+     * @param string $expected
+     *
+     * @return void
+     */
+    #[DataProvider('powProvider')]
+    public function testPowScale(string $value, string $exponent, ?int $scale, int $mode, string $expected): void
+    {
+        $this->assertSame($expected, (string)(new Decimal($value))->pow($exponent, $scale, $mode));
+    }
+
+    /**
+     * @return array
+     */
+    public static function powProvider(): array
+    {
+        $none = Decimal::ROUND_UNNECESSARY;
+
+        return [
+            'exact' => ['1.5', '2', null, $none, '2.25'],
+            'exact cube' => ['1.5', '3', null, $none, '3.375'],
+            'zero exponent' => ['1.5', '0', null, $none, '1'],
+            'integer' => ['8', '2', null, $none, '64'],
+            'negative base' => ['-2', '3', null, $none, '-8'],
+            'rounded' => ['1.5', '2', 1, Decimal::ROUND_HALF_UP, '2.3'],
+            'cut off' => ['1.5', '2', 1, Decimal::ROUND_DOWN, '2.2'],
+            'padded' => ['8', '2', 2, $none, '64.00'],
+            'negative exponent exact' => ['2', '-1', 2, $none, '0.50'],
+            'negative exponent own scale' => ['4.00', '-1', null, $none, '0.25'],
+            'negative exponent rounded' => ['3', '-1', 4, Decimal::ROUND_HALF_UP, '0.3333'],
+            'negative exponent rounded up' => ['3', '-2', 3, Decimal::ROUND_UP, '0.112'],
+            'whole exponent with decimals' => ['2', '2.0', null, $none, '4'],
+        ];
+    }
+
+    /**
+     * @param string $exponent
+     *
+     * @return void
+     */
+    #[DataProvider('invalidExponentProvider')]
+    public function testPowInvalidExponent(string $exponent): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new Decimal('2'))->pow($exponent);
+    }
+
+    /**
+     * @return array
+     */
+    public static function invalidExponentProvider(): array
+    {
+        return [
+            'fraction' => ['0.5'],
+            'too large' => ['9223372036854775808'],
+            'beyond limit' => ['10001'],
+            'beyond negative limit' => ['-10001'],
+            'smallest integer' => [(string)PHP_INT_MIN],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testPowZeroToNegative(): void
+    {
+        $this->expectException(DivisionByZeroException::class);
+
+        (new Decimal('0'))->pow(-1, 2);
+    }
+
+    /**
+     * @param string $value
+     * @param int|null $scale
+     * @param int $mode
+     * @param string $expected
+     *
+     * @return void
+     */
+    #[DataProvider('sqrtProvider')]
+    public function testSqrtRounding(string $value, ?int $scale, int $mode, string $expected): void
+    {
+        $this->assertSame($expected, (string)(new Decimal($value))->sqrt($scale, $mode));
+    }
+
+    /**
+     * @return array
+     */
+    public static function sqrtProvider(): array
+    {
+        $none = Decimal::ROUND_UNNECESSARY;
+
+        return [
+            'exact' => ['64', null, $none, '8'],
+            'exact decimal' => ['2.25', 1, $none, '1.5'],
+            'exact own scale' => ['2.2500', null, $none, '1.5000'],
+            'exact padded' => ['64', 2, $none, '8.00'],
+            'zero' => ['0.00', null, $none, '0.00'],
+            'down' => ['18', 5, Decimal::ROUND_DOWN, '4.24264'],
+            'half up stays' => ['18', 5, Decimal::ROUND_HALF_UP, '4.24264'],
+            'half up moves' => ['18', 3, Decimal::ROUND_HALF_UP, '4.243'],
+            'up' => ['18', 0, Decimal::ROUND_UP, '5'],
+            'ceil' => ['2', 2, Decimal::ROUND_CEIL, '1.42'],
+            'floor' => ['2', 2, Decimal::ROUND_FLOOR, '1.41'],
+            'half even' => ['2', 4, Decimal::ROUND_HALF_EVEN, '1.4142'],
+            'large' => ['1000000000000000000000000000000', null, $none, '1000000000000000'],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testSqrtInexactWithoutMode(): void
+    {
+        $this->expectException(RoundingNecessaryException::class);
+
+        (new Decimal('18'))->sqrt();
+    }
+
+    /**
+     * @return void
+     */
+    public function testSqrtNegative(): void
+    {
+        $this->expectException(NegativeNumberException::class);
+
+        (new Decimal('-4'))->sqrt();
+    }
+
+    /**
+     * @return void
+     */
+    public function testRoundUnnecessary(): void
+    {
+        $this->assertSame('1.50', (string)(new Decimal('1.5'))->round(2, Decimal::ROUND_UNNECESSARY));
+        $this->assertSame('1.5', (string)(new Decimal('1.500'))->withScale(1, Decimal::ROUND_UNNECESSARY));
+
+        $this->expectException(RoundingNecessaryException::class);
+
+        (new Decimal('1.25'))->round(1, Decimal::ROUND_UNNECESSARY);
+    }
+
+    /**
+     * @return void
+     */
+    public function testModByZero(): void
+    {
+        $this->expectException(DivisionByZeroException::class);
+
+        (new Decimal('10'))->mod('0.0');
+    }
+
+    /**
+     * @param string $method
+     * @param array $arguments
+     * @param string $exception
+     * @param string $parent
+     *
+     * @return void
+     */
+    #[DataProvider('exceptionProvider')]
+    public function testExceptionHierarchy(string $method, array $arguments, string $exception, string $parent): void
+    {
+        try {
+            if ($method === 'create') {
+                Decimal::create(...$arguments);
+            } else {
+                (new Decimal('-2.5'))->$method(...$arguments);
+            }
+            $this->fail('No exception thrown');
+        } catch (DecimalException $e) {
+            $this->assertInstanceOf($exception, $e);
+            $this->assertInstanceOf($parent, $e);
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public static function exceptionProvider(): array
+    {
+        return [
+            'not numeric' => ['create', ['abc'], InvalidNumberException::class, InvalidArgumentException::class],
+            'exponent limit' => ['create', ['1e99999'], InvalidNumberException::class, InvalidArgumentException::class],
+            'negative scale' => ['create', ['1', -1], InvalidArgumentException::class, InvalidArgumentException::class],
+            'unknown mode' => ['round', [0, 99], InvalidArgumentException::class, InvalidArgumentException::class],
+            'digits lost' => ['divide', [3, 2], RoundingNecessaryException::class, RuntimeException::class],
+            'division by zero' => ['divide', [0, 2], DivisionByZeroException::class, DivisionByZeroError::class],
+            'modulo by zero' => ['mod', [0], DivisionByZeroException::class, DivisionByZeroError::class],
+            'root of negative' => ['sqrt', [], NegativeNumberException::class, DomainException::class],
+            'fractional exponent' => ['pow', ['0.5'], InvalidArgumentException::class, InvalidArgumentException::class],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testInvalidNumberIsAnInvalidArgument(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        Decimal::create('abc');
+    }
+
+    /**
+     * @param string $value
+     *
+     * @return void
+     */
+    #[DataProvider('serializeProvider')]
+    public function testSerialize(string $value): void
+    {
+        $decimal = new Decimal($value);
+        $restored = unserialize(serialize($decimal));
+
+        $this->assertInstanceOf(Decimal::class, $restored);
+        $this->assertSame($value, (string)$restored);
+        $this->assertSame($decimal->scale(), $restored->scale());
+        $this->assertStringContainsString('"value"', serialize($decimal));
+        $this->assertStringNotContainsString('integralPart', serialize($decimal));
+    }
+
+    /**
+     * @return array
+     */
+    public static function serializeProvider(): array
+    {
+        return [
+            ['0'],
+            ['-1.50'],
+            ['0.00'],
+            ['123456789012345678901234567890.000100'],
+        ];
+    }
+
+    /**
+     * @return void
+     */
+    public function testUnserializeFromVersionOne(): void
+    {
+        $legacy = "O:35:\"PhpCollective\\DecimalObject\\Decimal\":4:{s:15:\"\0*\0integralPart\";s:1:\"1\";"
+            . "s:17:\"\0*\0fractionalPart\";s:2:\"50\";s:11:\"\0*\0negative\";b:1;s:8:\"\0*\0scale\";i:2;}";
+
+        $restored = unserialize($legacy);
+
+        $this->assertInstanceOf(Decimal::class, $restored);
+        $this->assertSame('-1.50', (string)$restored);
+        $this->assertSame(2, $restored->scale());
+    }
+
+    /**
+     * @return void
+     */
+    public function testUnserializeFromVersionOneWithDeclaredScale(): void
+    {
+        $legacy = "O:35:\"PhpCollective\\DecimalObject\\Decimal\":4:{s:15:\"\0*\0integralPart\";s:1:\"1\";"
+            . "s:17:\"\0*\0fractionalPart\";s:0:\"\";s:11:\"\0*\0negative\";b:0;s:8:\"\0*\0scale\";i:2;}";
+
+        $restored = unserialize($legacy);
+
+        $this->assertInstanceOf(Decimal::class, $restored);
+        $this->assertSame('1.00', (string)$restored);
+        $this->assertSame(['0.50', '0.50'], array_map('strval', $restored->split(2)));
+    }
+
+    /**
+     * @return void
+     */
+    public function testUnserializeInvalid(): void
+    {
+        $this->expectException(InvalidNumberException::class);
+
+        unserialize('O:35:"PhpCollective\DecimalObject\Decimal":1:{s:5:"value";s:3:"abc";}');
+    }
+
+    /**
+     * @return void
+     */
+    public function testNativeRoundingMode(): void
+    {
+        if (!enum_exists('RoundingMode')) {
+            $this->markTestSkipped('The native RoundingMode enum needs PHP 8.4.');
+        }
+
+        $cases = [
+            'HalfAwayFromZero' => '3',
+            'HalfTowardsZero' => '2',
+            'HalfEven' => '2',
+            'HalfOdd' => '3',
+            'TowardsZero' => '2',
+            'AwayFromZero' => '3',
+            'NegativeInfinity' => '2',
+            'PositiveInfinity' => '3',
+        ];
+        $decimal = new Decimal('2.5');
+        foreach ($cases as $name => $expected) {
+            $mode = constant('RoundingMode::' . $name);
+
+            $this->assertSame($expected, (string)$decimal->round(0, $mode), $name);
+            $this->assertSame($expected, (string)$decimal->withScale(0, $mode), $name);
+            $this->assertSame($expected, (string)(new Decimal('5'))->divide(2, 0, $mode), $name);
+        }
+
+        $this->assertSame(count($cases), count(constant('RoundingMode::HalfEven')::cases()));
     }
 }

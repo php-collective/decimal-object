@@ -37,7 +37,7 @@ A JSON number would be read back as a float by most clients, which defeats the p
 echo Decimal::create('-23.74')->toInt(); // -23
 ```
 
-Values outside the range of a PHP integer throw a `TypeError`. Check with `isBigInteger()` first when the value may be large:
+Values outside the range of a PHP integer throw an `OverflowException`. Check with `isBigInteger()` first when the value may be large:
 
 ```php
 $value = Decimal::create('9223372036854775808');
@@ -53,7 +53,16 @@ if (!$value->isBigInteger()) {
 var_dump(Decimal::create('-23.44')->toFloat()); // float(-23.44)
 ```
 
-A float is an approximation. Use it for display libraries and charts, not for further calculation. `toFloat()` throws a `TypeError` when `isBigDecimal()` is true, which is the case when the integral or the fractional digits exceed `PHP_INT_MAX`.
+A float holds about 15 significant digits, so longer values come back as the nearest float:
+
+```php
+var_dump(Decimal::create('0.12345678901234567890')->toFloat()); // float(0.12345678901234568)
+```
+
+Use it for display libraries and charts, not for further calculation. A value beyond the float range throws an `OverflowException`.
+
+> [!TIP] Changed in 2.0
+> `toFloat()` used to refuse values with long fractions, and both conversions threw a `TypeError`. See [Upgrading](../reference/upgrading#from-1-x-to-2-0).
 
 ## Scientific notation
 
@@ -65,6 +74,17 @@ echo Decimal::create('0')->toScientific();       // 0e0
 ```
 
 Decimals are kept as written, so the scale survives a round trip through `Decimal::create()`. Call `trim()` first for the shortest form.
+
+## Serialization
+
+`serialize()` stores the decimal string only:
+
+```php
+echo serialize(Decimal::create('19.90'));
+// O:35:"PhpCollective\DecimalObject\Decimal":1:{s:5:"value";s:5:"19.90";}
+```
+
+Objects serialized by 1.x are still read. For storage that other systems read too, prefer the plain string.
 
 ## Localized output
 

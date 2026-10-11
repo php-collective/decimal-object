@@ -2,26 +2,102 @@
 
 ## From 1.x to 2.0
 
-2.0 applies the corrections that change results or output for ordinary input. Review each row against your code.
+2.0 has one rule behind most of its changes: the library never drops a digit unless you tell it how. Calls that used to shorten a value without notice now either return the exact result or throw.
+
+### Floats are rejected
+
+A float passed to the constructor, `create()` or any arithmetic method throws an `InvalidArgumentException`. 1.x accepted floats and cut them to 14 significant digits.
+
+- Pass strings: `Decimal::create('19.90')`.
+- Where a float is unavoidable, use `Decimal::createFromFloat($float)` and round the result to the scale you expect.
+
+### Division, roots and powers need a rounding mode
 
 | Call | 1.x | 2.0 |
 | --- | --- | --- |
-| `new Decimal('1.5', 0)` | `1.5` | `1`, throws in strict mode |
+| `Decimal::create('10')->divide('3', 4)` | `3.3333` | `RoundingNecessaryException` |
+| `Decimal::create('10')->divide('4', 2)` | `2.50` | `2.50` |
+| `Decimal::create('18')->sqrt()` | `4` | `RoundingNecessaryException` |
+| `Decimal::create('64')->sqrt()` | `8` | `8` |
+| `Decimal::create('1.5')->pow(2)` | `2.2` | `2.25` |
+| `Decimal::average(['1', '2', '4'], 2)` | `2.33` | `RoundingNecessaryException` |
+
+Add `Decimal::ROUND_DOWN` as last argument to keep the 1.x result, or pick the mode you meant, for example `Decimal::ROUND_HALF_UP`. Results that fit the scale need no change.
+
+`pow()` with a positive exponent now returns the exact result instead of cutting it to the scale of the base.
+
+### A scale argument no longer cuts off
+
+| Call | 1.x | 2.0 |
+| --- | --- | --- |
+| `Decimal::create('0.129', 2)` | `0.12` | `RoundingNecessaryException` |
+| `Decimal::create('0.120', 2)` | `0.12` | `0.12` |
+| `Decimal::create('1.5', 0)` | `1.5` | `RoundingNecessaryException` |
+| `Decimal::create('19.99')->multiply('0.19', 2)` | `3.79` | `RoundingNecessaryException` |
+| `Decimal::create('1.55')->multiply('2.00', 2)` | `3.10` | `3.10` |
+
+`add()`, `subtract()`, `multiply()` and `mod()` take the rounding mode as third argument. For a value, round explicitly: `Decimal::create('0.129')->withScale(2, Decimal::ROUND_DOWN)`.
+
+The `$strict` argument of the constructor and of `create()` is removed. Its check is now always on.
+
+### The string shows the scale
+
+| Call | 1.x | 2.0 |
+| --- | --- | --- |
+| `(string)Decimal::create('0.1', 4)` | `0.1` | `0.1000` |
+| `(string)Decimal::create('1e3', 2)` | `1000` | `1000.00` |
+
+Stored and serialized values gain trailing zeros where a larger scale was declared. Call `trim()` if you need the short form.
+
+### Rounding
+
+| Call | 1.x | 2.0 |
+| --- | --- | --- |
 | `round(0, PHP_ROUND_HALF_EVEN)` | rounds half up | `InvalidArgumentException` |
 | `Decimal::create('1.25')->round(1, Decimal::ROUND_FLOOR)` | `1` | `1.2` |
+| `Decimal::create('15')->round(-1, Decimal::ROUND_FLOOR)` | `InvalidArgumentException` | `10` |
+
+Replace `PHP_ROUND_*` constants with the `Decimal::ROUND_*` ones, or with the native `RoundingMode` enum on PHP 8.4+. `round()` with `ROUND_FLOOR` or `ROUND_CEIL` and a scale above zero used to return a whole number; call `floor()` or `ceil()` if that is what you want.
+
+### Modulo
+
+| Call | 1.x | 2.0 |
+| --- | --- | --- |
 | `Decimal::create('10')->mod('0.3')` | `0` | `0.1` |
 | `Decimal::create('10')->mod('3.00')` | `1` | `1.00` |
-| `new Decimal('1.0e-5')` | scale 5 | scale 6 |
-| `new Decimal('1e3', 2)` | `1000` | `1000.00` |
-| `Decimal::create('5')->toScientific()` | `5.e0` | `5e0` |
 
-What to do:
+The result takes the larger scale of both operands.
 
-- **Scale of 0**: a scale of `0` now cuts off decimals like any other scale. Pass `null` when you mean "no scale".
-- **Rounding modes**: replace `PHP_ROUND_*` constants with the `Decimal::ROUND_*` ones. `round()` with `ROUND_FLOOR` or `ROUND_CEIL` and a scale above zero used to return a whole number; call `floor()` or `ceil()` if that is what you want.
-- **Modulo**: the result takes the larger scale of both operands. Pass the scale as second argument to keep the old one.
-- **Scientific notation**: a zero written in a string mantissa counts towards the scale, and `toScientific()` no longer prints a decimal point without decimals.
-- **Removed**: the misspelled `greatherThanOrEquals()`. Use `greaterThanOrEquals()`.
+### Scientific notation
+
+A zero written in a string mantissa counts towards the scale: `'1.0e-5'` has a scale of 6. `toScientific()` no longer prints a decimal point without decimals: `5e0` where 1.x printed `5.e0`.
+
+### Exceptions
+
+The library throws its own exceptions from `PhpCollective\DecimalObject\Exception`, all implementing `DecimalException`. Most extend the type thrown before, so existing `catch` blocks keep working. These do not:
+
+| Situation | 1.x | 2.0 |
+| --- | --- | --- |
+| `toInt()` out of range | `TypeError` | `OverflowException` |
+| `sqrt()` of a negative value | `ValueError` | `NegativeNumberException` |
+| `pow()` with a fractional exponent | `ValueError` | `InvalidArgumentException` |
+| Digits lost against a scale in strict mode | `InvalidArgumentException` | `RoundingNecessaryException` |
+
+See the [exception table](./api#exceptions).
+
+### Conversion
+
+`toFloat()` returns the nearest float for any value in the float range. It used to throw for values with long fractions.
+
+### Removed
+
+- `greatherThanOrEquals()`, the misspelled alias. Use `greaterThanOrEquals()`.
+- `isBigDecimal()`. `toFloat()` no longer depends on it.
+- The `$strict` argument.
+
+### Subclasses
+
+`setScale()` lost its `$strict` parameter and `resultScale()` is gone. Serialization uses `__serialize()` and stores the decimal string; data written by 1.x is still read.
 
 ## From 1.3 to 1.4
 
