@@ -19,5 +19,6 @@ Makefile export-ignore
 
 # Remove directories for archives
 .docker/ export-ignore
+docs/ export-ignore
 .github/ export-ignore
 tests/ export-ignore
