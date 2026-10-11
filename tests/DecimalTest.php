@@ -24,7 +24,9 @@ use PhpCollective\DecimalObject\Exception\RoundingNecessaryException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use stdClass;
 use Stringable;
+use TypeError;
 
 class DecimalTest extends TestCase
 {
@@ -443,8 +445,68 @@ class DecimalTest extends TestCase
         $value = '-23.74';
         $decimal = Decimal::create($value);
 
-        $result = $decimal->toInt();
-        $this->assertSame(-23, $result);
+        $this->assertSame(-23, $decimal->toInt(Decimal::ROUND_DOWN));
+        $this->assertSame(-24, $decimal->toInt(Decimal::ROUND_HALF_UP));
+        $this->assertSame(-24, $decimal->toInt(Decimal::ROUND_FLOOR));
+        $this->assertSame(5, Decimal::create('5.00')->toInt());
+    }
+
+    /**
+     * @return void
+     */
+    public function testToIntRefusesDecimals(): void
+    {
+        $this->expectException(RoundingNecessaryException::class);
+
+        Decimal::create('-23.74')->toInt();
+    }
+
+    /**
+     * @return void
+     */
+    public function testToIntRoundedOutOfRange(): void
+    {
+        $value = Decimal::create(PHP_INT_MAX . '.5');
+        $this->assertSame(PHP_INT_MAX, $value->toInt(Decimal::ROUND_DOWN));
+
+        $this->expectException(OverflowException::class);
+
+        $value->toInt(Decimal::ROUND_HALF_UP);
+    }
+
+    /**
+     * @return void
+     */
+    public function testCreateReturnsSameInstance(): void
+    {
+        $value = new Decimal('1.50');
+
+        $this->assertSame($value, Decimal::create($value));
+        $this->assertNotSame($value, Decimal::create($value, 2));
+        $this->assertSame('1.500', (string)Decimal::create($value, 3));
+    }
+
+    /**
+     * @return void
+     */
+    public function testObjectHasToBeStringable(): void
+    {
+        $this->expectException(TypeError::class);
+
+        // @phpstan-ignore argument.type
+        new Decimal(new stdClass());
+    }
+
+    /**
+     * @return void
+     */
+    public function testTruncateMatchesRoundDown(): void
+    {
+        $value = new Decimal('-12.379');
+
+        $this->assertSame((string)$value->round(2, Decimal::ROUND_DOWN), (string)$value->truncate(2));
+        $this->assertSame('12.3', (string)(new Decimal('12.3'))->truncate(5));
+        $this->assertSame('0.00', (string)(new Decimal('-0.001'))->truncate(2));
     }
 
     /**
@@ -1280,9 +1342,10 @@ class DecimalTest extends TestCase
     {
         $this->assertSame(PHP_INT_MIN, (new Decimal((string)PHP_INT_MIN))->toInt());
         $this->assertSame(PHP_INT_MAX, (new Decimal((string)PHP_INT_MAX))->toInt());
-        $this->assertFalse((new Decimal((string)PHP_INT_MIN))->isBigInteger());
-        $this->assertTrue((new Decimal('-9223372036854775809'))->isBigInteger());
-        $this->assertTrue((new Decimal('9223372036854775808'))->isBigInteger());
+        $this->assertTrue((new Decimal((string)PHP_INT_MIN))->fitsInt());
+        $this->assertTrue((new Decimal(PHP_INT_MAX . '.9'))->fitsInt());
+        $this->assertFalse((new Decimal('-9223372036854775809'))->fitsInt());
+        $this->assertFalse((new Decimal('9223372036854775808'))->fitsInt());
     }
 
     /**

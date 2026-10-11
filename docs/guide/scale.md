@@ -87,4 +87,4 @@ echo Decimal::create('99999999999999999999.99')->add('0.01');
 // 100000000000000000000.00
 ```
 
-`isBigInteger()` tells you whether a value still fits a PHP integer. See [Conversion](./conversion).
+`fitsInt()` tells you whether a value still fits a PHP integer. See [Conversion](./conversion).

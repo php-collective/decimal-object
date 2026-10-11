@@ -11,7 +11,7 @@ Class `PhpCollective\DecimalObject\Decimal`, implementing `JsonSerializable` and
 | Method | Description |
 | --- | --- |
 | `new Decimal($value, ?int $scale = null)` | Creates a decimal. Also accepts any `Stringable` with a numeric string. |
-| `Decimal::create($value, ?int $scale = null): static` | Same as the constructor, for chaining. |
+| `Decimal::create($value, ?int $scale = null): static` | Same as the constructor, for chaining. A `Decimal` passed without `$scale` is returned as is. |
 | `Decimal::tryCreate($value, ?int $scale = null): ?static` | Returns `null` for `null` and for input that is not numeric. |
 | `Decimal::createFromFloat(float $value): static` | The only way to pass a float. Keeps all its digits. |
 | `Decimal::zero(): static`, `Decimal::one(): static` | The values `0` and `1`. |
@@ -59,7 +59,7 @@ See [Arithmetic](../guide/arithmetic).
 | `roundToStep($step, $roundMode = ROUND_HALF_UP): static` | Rounds to the nearest multiple of `$step`. |
 | `floor(): static` | Nearest integer towards negative infinity. |
 | `ceil(): static` | Nearest integer towards positive infinity. |
-| `truncate(int $scale = 0): static` | Cuts off digits beyond `$scale`. |
+| `truncate(int $scale = 0): static` | Cuts off digits beyond `$scale`, like `round()` with `ROUND_DOWN`, but never adds zeros. |
 | `trim(): static` | Removes trailing zeros after the decimal point. |
 
 | Constant | Value | Native `RoundingMode` |
@@ -103,7 +103,7 @@ See [Comparison and checks](../guide/comparison).
 | `isInteger(): bool` | No decimals other than zeros |
 | `isEven(): bool` | Whole number divisible by two |
 | `isOdd(): bool` | Whole number not divisible by two |
-| `isBigInteger(): bool` | Integral part does not fit a PHP integer |
+| `fitsInt(): bool` | Whole number part is within the range of a PHP integer |
 | `sign(): int` | `-1`, `0` or `1` |
 | `scale(): int` | Number of decimal places |
 
@@ -112,7 +112,7 @@ See [Comparison and checks](../guide/comparison).
 | Method | Description |
 | --- | --- |
 | `toString(): string` | Exact decimal string, also used for `(string)` casts |
-| `toInt(): int` | Integer without decimals. Throws `OverflowException` when out of range. |
+| `toInt($roundMode = ROUND_UNNECESSARY): int` | Integer. Decimals other than zero need a `$roundMode`. Throws `OverflowException` when out of range. |
 | `toFloat(): float` | Nearest float. Throws `OverflowException` beyond the float range. |
 | `toScientific(): string` | Scientific notation such as `-2.2345e1` |
 | `jsonSerialize(): string` | Same as `toString()` |

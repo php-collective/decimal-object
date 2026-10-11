@@ -31,18 +31,20 @@ A JSON number would be read back as a float by most clients, which defeats the p
 
 ## Integer
 
-`toInt()` drops the decimals without rounding:
+`toInt()` returns whole numbers as they are. A value with decimals needs a rounding mode, otherwise a `RoundingNecessaryException` is thrown:
 
 ```php
-echo Decimal::create('-23.74')->toInt(); // -23
+echo Decimal::create('23.00')->toInt();                       // 23
+echo Decimal::create('-23.74')->toInt(Decimal::ROUND_DOWN);    // -23, same as an int cast
+echo Decimal::create('-23.74')->toInt(Decimal::ROUND_HALF_UP); // -24
 ```
 
-Values outside the range of a PHP integer throw an `OverflowException`. Check with `isBigInteger()` first when the value may be large:
+Values outside the range of a PHP integer throw an `OverflowException`. Check with `fitsInt()` first when the value may be large:
 
 ```php
 $value = Decimal::create('9223372036854775808');
 
-if (!$value->isBigInteger()) {
+if ($value->fitsInt()) {
     $int = $value->toInt();
 }
 ```

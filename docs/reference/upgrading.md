@@ -87,12 +87,27 @@ See the [exception table](./api#exceptions).
 
 ### Conversion
 
+`toInt()` no longer drops decimals on its own:
+
+| Call | 1.x | 2.0 |
+| --- | --- | --- |
+| `Decimal::create('23.74')->toInt()` | `23` | `RoundingNecessaryException` |
+| `Decimal::create('23.00')->toInt()` | `23` | `23` |
+| `Decimal::create('23.74')->toInt(Decimal::ROUND_DOWN)` | not available | `23` |
+
 `toFloat()` returns the nearest float for any value in the float range. It used to throw for values with long fractions.
+
+### Objects as input
+
+Only `Stringable` objects are accepted as value, which every class with a `__toString()` method is. Any other object is a `TypeError`; it was an `InvalidArgumentException` before.
+
+`Decimal::create()` returns the `Decimal` it was given when no scale is passed. 1.x returned a copy, which only shows in identity comparisons with `===`.
 
 ### Removed
 
 - `greatherThanOrEquals()`, the misspelled alias. Use `greaterThanOrEquals()`.
 - `isBigDecimal()`. `toFloat()` no longer depends on it.
+- `isBigInteger()`. Use `fitsInt()`, which answers the opposite question.
 - The `$strict` argument.
 
 ### Subclasses
