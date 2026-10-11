@@ -17,6 +17,8 @@ This library is one way to handle decimals in PHP. Depending on the project anot
 | `signum()` | `sign()` |
 | `sub()`, `mul()`, `div()` | `subtract()`, `multiply()`, `divide()` |
 | `shift()`, `isEven()`, `isOdd()` | Same method names |
+| `rem($value)` | `mod($value, $scale)`; set the result scale explicitly |
+| `mod($value)` | Integer modulo in php-decimal; see the different [modulo behavior](../guide/arithmetic#modulo) here |
 | `toFixed($places)` | `(string)$decimal->withScale($places)` |
 | `Decimal::sum()` | `Decimal::sum()` |
 | `Decimal::avg()` | `Decimal::average($values, $scale)` |
@@ -29,4 +31,4 @@ when migrating calculations.
 
 ## History
 
-The library was written in 2019 for the [Spryker](https://spryker.com/) commerce framework and has been used there in order and price calculations since. This repository is the independently maintained continuation for PHP 8. The original for older PHP versions is [spryker/decimal-object](https://github.com/spryker/decimal-object).
+The library was written in 2019 for the [Spryker](https://spryker.com/) commerce framework and has been used there in order and price calculations since. This repository is the independently maintained continuation for the PHP ecosystem. The original for older PHP versions is [spryker/decimal-object](https://github.com/spryker/decimal-object).

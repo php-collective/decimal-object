@@ -9,8 +9,8 @@ Class `PhpCollective\DecimalObject\Decimal`, implementing `JsonSerializable` and
 | Method | Description |
 | --- | --- |
 | `new Decimal($value, ?int $scale = null, bool $strict = false)` | Creates a decimal. Also accepts any `Stringable` with a numeric string. |
-| `Decimal::create($value, ?int $scale = null, bool $strict = false): static` | Same as the constructor, for chaining. |
-| `Decimal::tryCreate($value, ?int $scale = null): ?static` | Returns `null` for `null` and for input that is not numeric. |
+| `Decimal::create($value, ?int $scale = null, bool $strict = false): static` | Creates a decimal; without a scale, clones an instance of the called class while preserving its declared scale. |
+| `Decimal::tryCreate($value, ?int $scale = null): ?static` | Returns `null` for `null` or input rejected with `InvalidArgumentException`. |
 | `Decimal::createFromFloat(float $value): static` | Keeps all digits of the float, independent of the `precision` ini setting. |
 | `Decimal::zero(): static`, `Decimal::one(): static` | The values `0` and `1`. |
 

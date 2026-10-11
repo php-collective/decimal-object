@@ -12,7 +12,7 @@ $order->total = $order->total->add('0.10');
 $orders->saveOrFail($order);
 ```
 
-The plugin documentation covers setup, forms, localized input and formatting.
+The plugin documentation also covers forms, localized input and formatting.
 
 ## Your own framework
 

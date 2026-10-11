@@ -345,7 +345,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Equality
      *
-     * This method is equivalent to the `==` operator.
+     * Compares numeric values, ignoring differences in scale.
      *
      * @param self|string|float|int $value
      *
@@ -424,7 +424,7 @@ class Decimal implements JsonSerializable, Stringable
     public function compareTo(self|string|float|int $value): int
     {
         $decimal = static::create($value);
-        $scale = max($this->scale(), $decimal->scale(), strlen($this->fractionalPart), strlen($decimal->fractionalPart));
+        $scale = max($this->scale(), $decimal->scale(), $this->fractionalLength(), $decimal->fractionalLength());
 
         return bccomp((string)$this, (string)$decimal, $scale);
     }
@@ -772,7 +772,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * This method is equivalent to the ** operator.
+     * Raises this decimal to a whole-number exponent.
      *
      * @param self|string|float|int $exponent
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
@@ -805,7 +805,7 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * This method is equivalent to the % operator.
+     * Returns the remainder at the configured scale.
      *
      * @param self|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
@@ -1106,7 +1106,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Returns the decimal as int. Does not round.
      *
-     * This method is equivalent to a cast to int.
+     * Converts the numeric value, discarding fractional digits.
      *
      * @throws \TypeError
      *
