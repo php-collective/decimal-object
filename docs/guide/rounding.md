@@ -34,6 +34,7 @@ Pass a mode as second argument. Every mode rounds at the given scale:
 | `Decimal::ROUND_DOWN` | towards zero | `2` | `3` | `-2` | `2` |
 | `Decimal::ROUND_CEIL` | towards positive infinity | `3` | `4` | `-2` | `3` |
 | `Decimal::ROUND_FLOOR` | towards negative infinity | `2` | `3` | `-3` | `2` |
+| `Decimal::ROUND_UNNECESSARY` | refuses to round | throws | throws | throws | throws |
 
 ```php
 echo Decimal::create('0.125')->round(2, Decimal::ROUND_HALF_EVEN); // 0.12
@@ -43,6 +44,30 @@ echo Decimal::create('-12.375')->round(1, Decimal::ROUND_FLOOR);   // -12.4
 ```
 
 `ROUND_HALF_EVEN` is the banker's rounding used in accounting to avoid a drift over many values.
+
+`ROUND_UNNECESSARY` asserts that nothing has to be rounded. It pads and drops zeros, and throws a `RoundingNecessaryException` for anything else. It is the default of the arithmetic methods; `round()` and `withScale()` default to `ROUND_HALF_UP`.
+
+### Native rounding modes
+
+On PHP 8.4 and newer every method that takes a mode also accepts PHP's own `RoundingMode` enum:
+
+```php
+echo Decimal::create('2.5')->round(0, \RoundingMode::HalfEven);                 // 2
+echo Decimal::create('2')->divide('3', 2, \RoundingMode::HalfAwayFromZero);     // 0.67
+```
+
+| `RoundingMode` | Constant |
+| --- | --- |
+| `HalfAwayFromZero` | `ROUND_HALF_UP` |
+| `HalfTowardsZero` | `ROUND_HALF_DOWN` |
+| `HalfEven` | `ROUND_HALF_EVEN` |
+| `HalfOdd` | `ROUND_HALF_ODD` |
+| `AwayFromZero` | `ROUND_UP` |
+| `TowardsZero` | `ROUND_DOWN` |
+| `PositiveInfinity` | `ROUND_CEIL` |
+| `NegativeInfinity` | `ROUND_FLOOR` |
+
+The constants keep working on every supported PHP version, so code written for PHP 8.2 needs no change later.
 
 The constants have their own values. PHP's `PHP_ROUND_HALF_EVEN`, `PHP_ROUND_HALF_ODD` and `PHP_ROUND_HALF_DOWN` are not the same numbers. An unknown mode throws an `InvalidArgumentException`.
 

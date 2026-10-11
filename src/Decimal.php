@@ -9,12 +9,24 @@ declare(strict_types=1);
 
 namespace PhpCollective\DecimalObject;
 
-use DivisionByZeroError;
-use InvalidArgumentException;
 use JsonSerializable;
+use PhpCollective\DecimalObject\Exception\DivisionByZeroException;
+use PhpCollective\DecimalObject\Exception\InvalidArgumentException;
+use PhpCollective\DecimalObject\Exception\InvalidNumberException;
+use PhpCollective\DecimalObject\Exception\NegativeNumberException;
+use PhpCollective\DecimalObject\Exception\OverflowException;
+use PhpCollective\DecimalObject\Exception\RoundingNecessaryException;
+use RoundingMode;
 use Stringable;
-use TypeError;
 
+/**
+ * Immutable decimal number with a fixed number of decimal places.
+ *
+ * Values are given as strings, integers or other Decimal objects. Every method that takes a
+ * value lists `float` in its type only to reject it with an exception: without the type, PHP
+ * would silently convert a float to an integer for callers that do not use strict types.
+ * Use createFromFloat() to convert a float on purpose.
+ */
 class Decimal implements JsonSerializable, Stringable
 {
     /**
@@ -69,6 +81,13 @@ class Decimal implements JsonSerializable, Stringable
     public const ROUND_UP = 13;
 
     /**
+     * Refuses to round: throws if the result does not fit the scale exactly.
+     *
+     * @var int
+     */
+    public const ROUND_UNNECESSARY = 14;
+
+    /**
      * Largest exponent accepted in scientific notation, in either direction.
      *
      * `1e1000000000` would otherwise expand to a string of a billion digits.
@@ -101,17 +120,17 @@ class Decimal implements JsonSerializable, Stringable
     protected int $scale = 0;
 
     /**
-     * @param object|string|float|int $value
-     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
-     * @param bool $strict If scale should be strictly checked to avoid accidental precision loss.
+     * @param object|string|float|int $value A float is rejected, see the class description.
+     * @param int|null $scale Decimal places. Omit to take them from the value. Zeros are added
+     *   to reach a larger scale; a smaller one is only accepted if no digit other than zero is lost.
      */
-    public function __construct(object|string|float|int $value, ?int $scale = null, bool $strict = false)
+    public function __construct(object|string|float|int $value, ?int $scale = null)
     {
         $value = $this->parseValue($value);
         $value = $this->normalizeValue($value);
 
         $this->setValue($value, $scale);
-        $this->setScale($scale, $strict);
+        $this->setScale($scale);
         $this->normalizeZero();
     }
 
@@ -126,31 +145,25 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * @param object|string|float|int $value
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidNumberException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException For a float.
      *
      * @return string
      */
     protected function parseValue(object|string|float|int $value): string
     {
-        if (!(is_scalar($value) || $value instanceof Stringable)) {
-            throw new InvalidArgumentException('Invalid value');
+        if (is_float($value)) {
+            throw new InvalidArgumentException('Floats are not accepted, use Decimal::createFromFloat().');
         }
-
-        if ($value instanceof Stringable) {
+        if (is_object($value)) {
+            if (!($value instanceof Stringable)) {
+                throw new InvalidNumberException('Invalid value');
+            }
             $value = (string)$value;
         }
 
         if (is_string($value) && !is_numeric(trim($value))) {
-            throw new InvalidArgumentException('Invalid non numeric value');
-        }
-
-        if (is_float($value)) {
-            if (!is_finite($value)) {
-                throw new InvalidArgumentException('Invalid non finite value');
-            }
-
-            // PHP renders large and small floats as `1.0E+25`, that zero is not a significant digit.
-            return str_replace('.0E', 'E', (string)$value);
+            throw new InvalidNumberException('Invalid non numeric value');
         }
 
         return (string)$value;
@@ -182,17 +195,16 @@ class Decimal implements JsonSerializable, Stringable
      *
      * @param object|string|float|int $value
      * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
-     * @param bool $strict If scale should be strictly checked to avoid accidental precision loss.
      *
      * @return static
      */
-    public static function create(object|string|float|int $value, ?int $scale = null, bool $strict = false): static
+    public static function create(object|string|float|int $value, ?int $scale = null): static
     {
         if ($scale === null && $value instanceof static) {
             return clone $value;
         }
 
-        return new static($value, $scale, $strict);
+        return new static($value, $scale);
     }
 
     /**
@@ -211,7 +223,7 @@ class Decimal implements JsonSerializable, Stringable
 
         try {
             return static::create($value, $scale);
-        } catch (InvalidArgumentException) {
+        } catch (InvalidNumberException) {
             return null;
         }
     }
@@ -219,19 +231,19 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * Creates a decimal from a float with all the digits needed to get the same float back.
      *
-     * Passing a float to create() goes through PHP's string cast and its `precision`
-     * ini setting, which drops digits beyond the 14th by default.
+     * This is the only way to pass a float. The result holds what the float really
+     * stores, including its binary rounding error.
      *
      * @param float $value
      *
-     * @throws \InvalidArgumentException If the float is INF or NAN.
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidNumberException If the float is INF or NAN.
      *
      * @return static
      */
     public static function createFromFloat(float $value): static
     {
         if (!is_finite($value)) {
-            throw new InvalidArgumentException('Invalid non finite value');
+            throw new InvalidNumberException('Invalid non finite value');
         }
 
         $string = '0';
@@ -279,12 +291,13 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * @param iterable<object|string|float|int> $values
      * @param int $scale Decimal places in the result
+     * @param \RoundingMode|int $roundMode One of the ROUND_* constants
      *
-     * @throws \InvalidArgumentException If there are no values.
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException If there are no values.
      *
      * @return static
      */
-    public static function average(iterable $values, int $scale): static
+    public static function average(iterable $values, int $scale, RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): static
     {
         $sum = new static('0');
         $count = 0;
@@ -296,7 +309,7 @@ class Decimal implements JsonSerializable, Stringable
             throw new InvalidArgumentException('Cannot average an empty list.');
         }
 
-        return $sum->divide($count, $scale);
+        return $sum->divide($count, $scale, $roundMode);
     }
 
     /**
@@ -323,7 +336,7 @@ class Decimal implements JsonSerializable, Stringable
      * @param iterable<object|string|float|int> $values
      * @param int $direction -1 for the smallest, 1 for the largest value
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
      * @return static
      */
@@ -422,50 +435,48 @@ class Decimal implements JsonSerializable, Stringable
      * Add $value to this Decimal and return the sum as a new Decimal.
      *
      * @param self|string|float|int $value
-     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
+     * @param int|null $scale Decimal places in the result. Omit for the larger scale of both, which is exact.
+     * @param \RoundingMode|int $roundMode Applied when $scale is smaller than the exact result.
      *
      * @return static
      */
-    public function add(self|string|float|int $value, ?int $scale = null): static
+    public function add(self|string|float|int $value, ?int $scale = null, RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): static
     {
         $decimal = static::create($value);
-        $scale = $this->resultScale($this, $decimal, $scale);
+        $exact = bcadd((string)$this, (string)$decimal, max($this->scale(), $decimal->scale()));
 
-        return new static(bcadd((string)$this, (string)$decimal, $scale));
+        return $this->result($exact, $scale, $roundMode);
     }
 
     /**
-     * Return an appropriate scale for an arithmetic operation on two Decimals.
-     *
-     * If $scale is specified and is a valid positive integer, return it.
-     * Otherwise, return the higher of the scales of the operands.
-     *
-     * @param self $a
-     * @param self $b
+     * @param string $exact Result with all its digits
      * @param int|null $scale
+     * @param \RoundingMode|int $roundMode
      *
-     * @return int
+     * @return static
      */
-    protected function resultScale(self $a, self $b, ?int $scale = null): int
+    protected function result(string $exact, ?int $scale, RoundingMode|int $roundMode): static
     {
-        return $scale ?? max($a->scale(), $b->scale());
+        $result = new static($exact);
+
+        return $scale === null ? $result : $result->withScale($scale, $roundMode);
     }
 
     /**
-     * Subtract $value from this Decimal and return the difference as a new
-     * Decimal.
+     * Subtract $value from this Decimal and return the difference as a new Decimal.
      *
      * @param self|string|float|int $value
-     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
+     * @param int|null $scale Decimal places in the result. Omit for the larger scale of both, which is exact.
+     * @param \RoundingMode|int $roundMode Applied when $scale is smaller than the exact result.
      *
      * @return static
      */
-    public function subtract(self|string|float|int $value, ?int $scale = null): static
+    public function subtract(self|string|float|int $value, ?int $scale = null, RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): static
     {
         $decimal = static::create($value);
-        $scale = $this->resultScale($this, $decimal, $scale);
+        $exact = bcsub((string)$this, (string)$decimal, max($this->scale(), $decimal->scale()));
 
-        return new static(bcsub((string)$this, (string)$decimal, $scale));
+        return $this->result($exact, $scale, $roundMode);
     }
 
     /**
@@ -602,7 +613,7 @@ class Decimal implements JsonSerializable, Stringable
      * @param self|string|float|int $min
      * @param self|string|float|int $max
      *
-     * @throws \InvalidArgumentException If $min is greater than $max.
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException If $min is greater than $max.
      *
      * @return static
      */
@@ -627,18 +638,17 @@ class Decimal implements JsonSerializable, Stringable
      * Multiply this Decimal by $value and return the product as a new Decimal.
      *
      * @param self|string|float|int $value
-     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
+     * @param int|null $scale Decimal places in the result. Omit for the sum of both scales, which is exact.
+     * @param \RoundingMode|int $roundMode Applied when $scale is smaller than the exact result.
      *
      * @return static
      */
-    public function multiply(self|string|float|int $value, ?int $scale = null): static
+    public function multiply(self|string|float|int $value, ?int $scale = null, RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): static
     {
         $decimal = static::create($value);
-        if ($scale === null) {
-            $scale = $this->scale() + $decimal->scale();
-        }
+        $exact = bcmul((string)$this, (string)$decimal, $this->scale() + $decimal->scale());
 
-        return new static(bcmul((string)$this, (string)$decimal, $scale));
+        return $this->result($exact, $scale, $roundMode);
     }
 
     /**
@@ -646,21 +656,19 @@ class Decimal implements JsonSerializable, Stringable
      *
      * @param self|string|float|int $value
      * @param int $scale Decimal places in the result
-     * @param int|null $roundMode One of the ROUND_* constants. Omit to cut off after $scale places.
+     * @param \RoundingMode|int $roundMode One of the ROUND_* constants. By default the quotient
+     *   has to fit the scale exactly; pass ROUND_DOWN to cut it off.
      *
-     * @throws \DivisionByZeroError if $value is zero.
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\DivisionByZeroException if $value is zero.
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
      * @return static
      */
-    public function divide(self|string|float|int $value, int $scale, ?int $roundMode = null): static
+    public function divide(self|string|float|int $value, int $scale, RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): static
     {
         $decimal = static::create($value);
         if ($decimal->isZero()) {
-            throw new DivisionByZeroError('Cannot divide by zero. Only Chuck Norris can!');
-        }
-        if ($roundMode === null) {
-            return new static(bcdiv((string)$this, (string)$decimal, $scale));
+            throw new DivisionByZeroException('Cannot divide by zero. Only Chuck Norris can!');
         }
         if ($scale < 0) {
             throw new InvalidArgumentException('Scale must be >= 0.');
@@ -676,7 +684,7 @@ class Decimal implements JsonSerializable, Stringable
      *
      * @param self|string|float|int $value
      *
-     * @throws \DivisionByZeroError if $value is zero.
+     * @throws \PhpCollective\DecimalObject\Exception\DivisionByZeroException if $value is zero.
      *
      * @return array{0: static, 1: static} Quotient and remainder
      */
@@ -684,10 +692,10 @@ class Decimal implements JsonSerializable, Stringable
     {
         $decimal = static::create($value);
         if ($decimal->isZero()) {
-            throw new DivisionByZeroError('Cannot divide by zero. Only Chuck Norris can!');
+            throw new DivisionByZeroException('Cannot divide by zero. Only Chuck Norris can!');
         }
 
-        $scale = max($this->fractionalLength(), $decimal->fractionalLength());
+        $scale = max($this->scale(), $decimal->scale());
         $quotient = bcdiv((string)$this, (string)$decimal, 0);
         $remainder = bcsub((string)$this, bcmul($quotient, (string)$decimal, $scale), $scale);
 
@@ -698,13 +706,13 @@ class Decimal implements JsonSerializable, Stringable
      * Rounds to the nearest multiple of $step, for example 0.05 for cash amounts.
      *
      * @param self|string|float|int $step Greater than zero
-     * @param int $roundMode One of the ROUND_* constants
+     * @param \RoundingMode|int $roundMode One of the ROUND_* constants, or a native rounding mode on PHP 8.4+
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
      * @return static
      */
-    public function roundToStep(self|string|float|int $step, int $roundMode = self::ROUND_HALF_UP): static
+    public function roundToStep(self|string|float|int $step, RoundingMode|int $roundMode = self::ROUND_HALF_UP): static
     {
         $step = static::create($step);
         if (!$step->isPositive()) {
@@ -712,7 +720,7 @@ class Decimal implements JsonSerializable, Stringable
         }
 
         $steps = $this->roundedQuotient($step, 0, $roundMode);
-        $scale = $step->fractionalLength();
+        $scale = $step->scale();
 
         return new static(bcmul($steps, (string)$step, $scale), $scale);
     }
@@ -722,18 +730,14 @@ class Decimal implements JsonSerializable, Stringable
      * @param int $scale
      * @param int $roundMode
      *
-     * @throws \InvalidArgumentException
-     *
      * @return string This value divided by $divisor, rounded to $scale decimal places.
      */
-    protected function roundedQuotient(self $divisor, int $scale, int $roundMode): string
+    protected function roundedQuotient(self $divisor, int $scale, RoundingMode|int $roundMode): string
     {
-        if (!in_array($roundMode, static::roundModes(), true)) {
-            throw new InvalidArgumentException('Unsupported round mode `' . $roundMode . '`.');
-        }
+        $roundMode = static::roundMode($roundMode);
 
         // Work on whole numbers so the remainder tells exactly whether and how to round.
-        $places = max($this->fractionalLength(), $divisor->fractionalLength());
+        $places = max($this->scale(), $divisor->scale());
         $numerator = $this->shift($places)->integralPart . str_repeat('0', $scale);
         $denominator = $divisor->shift($places)->integralPart;
 
@@ -753,77 +757,113 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * @return int Number of decimals actually stored, which a larger declared scale does not pad.
-     */
-    protected function fractionalLength(): int
-    {
-        return strlen($this->fractionalPart);
-    }
-
-    /**
      * This method is equivalent to the ** operator.
      *
-     * @param self|string|int $exponent
-     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
+     * @param self|string|float|int $exponent A whole number up to MAX_EXPONENT in either direction
+     * @param int|null $scale Decimal places in the result. Omit for the exact result of a positive
+     *   exponent, or the scale of this value for a negative one.
+     * @param \RoundingMode|int $roundMode Applied when $scale is smaller than the exact result.
+     *
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\DivisionByZeroException
      *
      * @return static
      */
-    public function pow(self|string|int $exponent, ?int $scale = null): static
+    public function pow(self|string|float|int $exponent, ?int $scale = null, RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): static
     {
-        if ($scale === null) {
-            $scale = $this->scale();
+        $exponent = static::create($exponent);
+        if (!$exponent->isInteger()) {
+            throw new InvalidArgumentException('Exponent must be a whole number.');
+        }
+        if ($exponent->absolute()->greaterThan(static::MAX_EXPONENT)) {
+            throw new InvalidArgumentException('Exponent must be between -' . static::MAX_EXPONENT . ' and ' . static::MAX_EXPONENT . '.');
         }
 
-        return new static(bcpow((string)$this, (string)static::create($exponent), $scale));
+        $times = abs($exponent->toInt());
+        $power = bcpow((string)$this, (string)$times, $this->scale() * $times);
+        if (!$exponent->isNegative()) {
+            return $this->result($power, $scale, $roundMode);
+        }
+
+        $power = new static($power);
+        if ($power->isZero()) {
+            throw new DivisionByZeroException('Zero cannot be raised to a negative power.');
+        }
+
+        return static::one()->divide($power, $scale ?? $this->scale(), $roundMode);
     }
 
     /**
-     * Returns the square root of this decimal, with the same scale as this decimal.
+     * Returns the square root of this decimal.
      *
-     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
+     * @param int|null $scale Decimal places in the result. Omit for the scale of this value.
+     * @param \RoundingMode|int $roundMode One of the ROUND_* constants. By default the root
+     *   has to fit the scale exactly.
+     *
+     * @throws \PhpCollective\DecimalObject\Exception\NegativeNumberException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
      * @return static
      */
-    public function sqrt(?int $scale = null): static
+    public function sqrt(?int $scale = null, RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): static
     {
-        if ($scale === null) {
-            $scale = $this->scale();
+        if ($this->negative) {
+            throw new NegativeNumberException('Cannot take the square root of a negative number.');
+        }
+        $scale ??= $this->scale();
+        if ($scale < 0) {
+            throw new InvalidArgumentException('Scale must be >= 0.');
+        }
+        $roundMode = static::roundMode($roundMode);
+
+        $value = (string)$this;
+        $compareScale = max($this->scale(), 2 * $scale + 2);
+
+        // bcsqrt() cuts off, so the root is at most one last-place unit too small.
+        $root = bcsqrt($value, $scale);
+        $exact = bccomp(bcmul($root, $root, 2 * $scale), $value, $compareScale) === 0;
+        $middle = $root . ($scale === 0 ? '.' : '') . '5';
+        $half = $exact ? -1 : bccomp($value, bcmul($middle, $middle, 2 * $scale + 2), $compareScale);
+        $odd = (int)substr($root, -1) % 2 === 1;
+
+        if (static::roundsAwayFromZero($roundMode, false, $exact, $half, $odd)) {
+            $root = bcadd($root, $scale > 0 ? '0.' . str_repeat('0', $scale - 1) . '1' : '1', $scale);
         }
 
-        return new static(bcsqrt((string)$this, $scale));
+        return new static($root, $scale);
     }
 
     /**
      * This method is equivalent to the % operator.
      *
-     * @param self|string|int $value
-     * @param int|null $scale Decimal places in the result. Omit to enable auto-detection.
+     * @param self|string|float|int $value
+     * @param int|null $scale Decimal places in the result. Omit for the larger scale of both, which is exact.
+     * @param \RoundingMode|int $roundMode Applied when $scale is smaller than the exact result.
+     *
+     * @throws \PhpCollective\DecimalObject\Exception\DivisionByZeroException if $value is zero.
      *
      * @return static
      */
-    public function mod(self|string|int $value, ?int $scale = null): static
+    public function mod(self|string|float|int $value, ?int $scale = null, RoundingMode|int $roundMode = self::ROUND_UNNECESSARY): static
     {
         $decimal = static::create($value);
-        $scale = $this->resultScale($this, $decimal, $scale);
+        if ($decimal->isZero()) {
+            throw new DivisionByZeroException('Modulo by zero');
+        }
+        $exact = bcmod((string)$this, (string)$decimal, max($this->scale(), $decimal->scale()));
 
-        return new static(bcmod((string)$this, (string)$decimal, $scale));
+        return $this->result($exact, $scale, $roundMode);
     }
 
     /**
      * @param int $scale Decimal places in the result. Negative values round to tens, hundreds and so on.
-     * @param int $roundMode One of the ROUND_* constants
-     *
-     * @throws \InvalidArgumentException
+     * @param \RoundingMode|int $roundMode One of the ROUND_* constants, or a native rounding mode on PHP 8.4+
      *
      * @return static
      */
-    public function round(int $scale = 0, int $roundMode = self::ROUND_HALF_UP): static
+    public function round(int $scale = 0, RoundingMode|int $roundMode = self::ROUND_HALF_UP): static
     {
-        if (!in_array($roundMode, static::roundModes(), true)) {
-            throw new InvalidArgumentException('Unsupported round mode `' . $roundMode . '`.');
-        }
-
-        return new static($this->roundToScale($scale, $roundMode), max($scale, 0));
+        return new static($this->roundToScale($scale, static::roundMode($roundMode)), max($scale, 0));
     }
 
     /**
@@ -832,20 +872,18 @@ class Decimal implements JsonSerializable, Stringable
      * Missing places are filled with zeros, surplus places are rounded.
      *
      * @param int $scale Decimal places in the result
-     * @param int $roundMode One of the ROUND_* constants
+     * @param \RoundingMode|int $roundMode One of the ROUND_* constants, or a native rounding mode on PHP 8.4+
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
      * @return static
      */
-    public function withScale(int $scale, int $roundMode = self::ROUND_HALF_UP): static
+    public function withScale(int $scale, RoundingMode|int $roundMode = self::ROUND_HALF_UP): static
     {
         if ($scale < 0) {
             throw new InvalidArgumentException('Scale must be >= 0.');
         }
-        if (!in_array($roundMode, static::roundModes(), true)) {
-            throw new InvalidArgumentException('Unsupported round mode `' . $roundMode . '`.');
-        }
+        $roundMode = static::roundMode($roundMode);
         if ($scale >= strlen($this->fractionalPart)) {
             return $this->copy(null, str_pad($this->fractionalPart, $scale, '0'));
         }
@@ -892,7 +930,43 @@ class Decimal implements JsonSerializable, Stringable
             static::ROUND_DOWN,
             static::ROUND_CEIL,
             static::ROUND_FLOOR,
+            static::ROUND_UNNECESSARY,
         ];
+    }
+
+    /**
+     * Validates a mode and maps the native enum of PHP 8.4+ to the constants of this class.
+     *
+     * The enum is matched by case name, so this file loads on PHP versions that do not have it.
+     *
+     * @param \RoundingMode|int $roundMode
+     *
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
+     *
+     * @return int
+     */
+    protected static function roundMode(RoundingMode|int $roundMode): int
+    {
+        if (!is_int($roundMode)) {
+            $native = [
+                'HalfAwayFromZero' => static::ROUND_HALF_UP,
+                'HalfTowardsZero' => static::ROUND_HALF_DOWN,
+                'HalfEven' => static::ROUND_HALF_EVEN,
+                'HalfOdd' => static::ROUND_HALF_ODD,
+                'AwayFromZero' => static::ROUND_UP,
+                'TowardsZero' => static::ROUND_DOWN,
+                'PositiveInfinity' => static::ROUND_CEIL,
+                'NegativeInfinity' => static::ROUND_FLOOR,
+            ];
+
+            return $native[$roundMode->name]
+                ?? throw new InvalidArgumentException('Unsupported round mode `' . $roundMode->name . '`.');
+        }
+        if (!in_array($roundMode, static::roundModes(), true)) {
+            throw new InvalidArgumentException('Unsupported round mode `' . $roundMode . '`.');
+        }
+
+        return $roundMode;
     }
 
     /**
@@ -925,10 +999,20 @@ class Decimal implements JsonSerializable, Stringable
      * @param int $half -1, 0 or 1 for a rest below, at or above the half way point
      * @param bool $odd If the last kept digit is odd.
      *
+     * @throws \PhpCollective\DecimalObject\Exception\RoundingNecessaryException
+     *
      * @return bool If the last kept digit has to move one step away from zero.
      */
     protected static function roundsAwayFromZero(int $roundMode, bool $negative, bool $exact, int $half, bool $odd): bool
     {
+        if ($roundMode === static::ROUND_UNNECESSARY) {
+            if (!$exact) {
+                throw new RoundingNecessaryException('The result does not fit the scale. Pass a rounding mode to round it.');
+            }
+
+            return false;
+        }
+
         return match ($roundMode) {
             static::ROUND_FLOOR => !$exact && $negative,
             static::ROUND_CEIL => !$exact && !$negative,
@@ -949,7 +1033,7 @@ class Decimal implements JsonSerializable, Stringable
      *
      * @param array<object|string|float|int> $ratios Non negative weights, keys are preserved.
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
      * @return array<static>
      */
@@ -974,7 +1058,7 @@ class Decimal implements JsonSerializable, Stringable
             throw new InvalidArgumentException('Ratios must add up to more than zero.');
         }
 
-        $scale = max($this->scale(), $this->fractionalLength());
+        $scale = $this->scale();
         $units = $this->absolute()->shift($scale)->integralPart;
 
         $shares = [];
@@ -1006,7 +1090,7 @@ class Decimal implements JsonSerializable, Stringable
      *
      * @param int $parts
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
      * @return array<static>
      */
@@ -1044,7 +1128,7 @@ class Decimal implements JsonSerializable, Stringable
      *
      * @param int $scale Decimal places in the result
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
      *
      * @return static
      */
@@ -1060,23 +1144,22 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
-     * Return some approximation of this Decimal as a PHP native float.
+     * Return the nearest PHP float.
      *
-     * Due to the nature of binary floating-point, some valid values of Decimal
-     * will not have any finite representation as a float, and some valid
-     * values of Decimal will be out of the range handled by floats.
+     * A float holds about 15 significant digits, so this loses precision for longer values.
      *
-     * @throws \TypeError
+     * @throws \PhpCollective\DecimalObject\Exception\OverflowException If the value is beyond the float range.
      *
      * @return float
      */
     public function toFloat(): float
     {
-        if ($this->isBigDecimal()) {
-            throw new TypeError('Cannot cast Big Decimal to Float');
+        $float = (float)$this->toString();
+        if (is_infinite($float)) {
+            throw new OverflowException('Value is out of range for a float.');
         }
 
-        return (float)$this->toString();
+        return $float;
     }
 
     /**
@@ -1084,14 +1167,14 @@ class Decimal implements JsonSerializable, Stringable
      *
      * This method is equivalent to a cast to int.
      *
-     * @throws \TypeError
+     * @throws \PhpCollective\DecimalObject\Exception\OverflowException
      *
      * @return int
      */
     public function toInt(): int
     {
         if ($this->isBigInteger()) {
-            throw new TypeError('Cannot cast Big Integer to Integer');
+            throw new OverflowException('Value is out of range for an integer.');
         }
 
         return (int)$this->toString();
@@ -1105,14 +1188,6 @@ class Decimal implements JsonSerializable, Stringable
         $value = ($this->negative ? '-' : '') . $this->integralPart;
 
         return bccomp($value, (string)PHP_INT_MAX) === 1 || bccomp($value, (string)PHP_INT_MIN) === -1;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isBigDecimal(): bool
-    {
-        return $this->isBigInteger() || bccomp($this->fractionalPart ?: '0', (string)PHP_INT_MAX) === 1;
     }
 
     /**
@@ -1211,6 +1286,44 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
+     * @return array{value: string}
+     */
+    public function __serialize(): array
+    {
+        return ['value' => $this->toString()];
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidNumberException
+     *
+     * @return void
+     */
+    public function __unserialize(array $data): void
+    {
+        // Objects serialized by 1.x stored the properties themselves.
+        $legacy = "\0*\0";
+        if (!isset($data['value']) && isset($data[$legacy . 'integralPart'])) {
+            $data = [
+                'value' => (!empty($data[$legacy . 'negative']) ? '-' : '') . $data[$legacy . 'integralPart']
+                    . ($data[$legacy . 'fractionalPart'] !== '' ? static::RADIX_MARK . $data[$legacy . 'fractionalPart'] : ''),
+                $legacy . 'scale' => $data[$legacy . 'scale'] ?? null,
+            ];
+        }
+        if (!isset($data['value']) || !is_string($data['value'])) {
+            throw new InvalidNumberException('Invalid serialized value');
+        }
+
+        $value = $this->normalizeValue($this->parseValue($data['value']));
+        $this->setValue($value, null);
+        // 1.x could declare more decimals than it stored, 2.0 always shows them.
+        $scale = $data[$legacy . 'scale'] ?? null;
+        $this->setScale(is_int($scale) && $scale > strlen($this->fractionalPart) ? $scale : null);
+        $this->normalizeZero();
+    }
+
+    /**
      * @param string|null $integerPart
      * @param string|null $decimalPart
      * @param bool|null $negative
@@ -1225,7 +1338,7 @@ class Decimal implements JsonSerializable, Stringable
         }
         if ($decimalPart !== null) {
             $clone->fractionalPart = $decimalPart;
-            $clone->setScale(null, false);
+            $clone->setScale(null);
         }
         if ($negative !== null) {
             $clone->negative = $negative;
@@ -1266,7 +1379,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * @param string $value
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidNumberException
      *
      * @return void
      */
@@ -1274,7 +1387,7 @@ class Decimal implements JsonSerializable, Stringable
     {
         preg_match('/^(-)?([^.]+)$/', $value, $matches);
         if ($matches === []) {
-            throw new InvalidArgumentException('Invalid integer number');
+            throw new InvalidNumberException('Invalid integer number');
         }
 
         $this->negative = $matches[1] === '-';
@@ -1285,7 +1398,7 @@ class Decimal implements JsonSerializable, Stringable
     /**
      * @param string $value
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidNumberException
      *
      * @return void
      */
@@ -1293,7 +1406,7 @@ class Decimal implements JsonSerializable, Stringable
     {
         preg_match('/^(-)?(.*)\.(.*)$/', $value, $matches);
         if ($matches === []) {
-            throw new InvalidArgumentException('Invalid float number');
+            throw new InvalidNumberException('Invalid float number');
         }
 
         $this->negative = $matches[1] === '-';
@@ -1305,7 +1418,7 @@ class Decimal implements JsonSerializable, Stringable
      * @param string $value
      * @param int|null $scale
      *
-     * @throws \InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidNumberException
      *
      * @return void
      */
@@ -1313,7 +1426,7 @@ class Decimal implements JsonSerializable, Stringable
     {
         $pattern = '/^(-?)(\d+)(?:' . preg_quote(static::RADIX_MARK, '/') . '(\d*))?' . static::EXP_MARK . '([+-]?\d+)$/i';
         if (preg_match($pattern, $value, $matches) !== 1) {
-            throw new InvalidArgumentException('Invalid scientific value/notation: ' . $value);
+            throw new InvalidNumberException('Invalid scientific value/notation: ' . $value);
         }
 
         $this->negative = $matches[1] === '-';
@@ -1321,7 +1434,7 @@ class Decimal implements JsonSerializable, Stringable
         $fractionalPart = $matches[3];
         $exp = (int)$matches[4];
         if (abs($exp) > static::MAX_EXPONENT) {
-            throw new InvalidArgumentException('Exponent must be between -' . static::MAX_EXPONENT . ' and ' . static::MAX_EXPONENT . '.');
+            throw new InvalidNumberException('Exponent must be between -' . static::MAX_EXPONENT . ' and ' . static::MAX_EXPONENT . '.');
         }
 
         if ($exp < 0) {
@@ -1335,36 +1448,37 @@ class Decimal implements JsonSerializable, Stringable
 
         $this->integralPart = ltrim($integralPart, '0') ?: '0';
         $this->fractionalPart = $fractionalPart;
-
-        if ($scale !== null) {
-            $this->fractionalPart = str_pad($this->fractionalPart, $scale, '0');
-        }
     }
 
     /**
-     * @param int|null $scale
-     * @param bool $strict
+     * Brings the decimals in line with the scale, so the string always shows it.
      *
-     * @throws \InvalidArgumentException
+     * @param int|null $scale
+     *
+     * @throws \PhpCollective\DecimalObject\Exception\InvalidArgumentException
+     * @throws \PhpCollective\DecimalObject\Exception\RoundingNecessaryException
      *
      * @return void
      */
-    protected function setScale(?int $scale, bool $strict): void
+    protected function setScale(?int $scale): void
     {
-        if ($scale !== null && $scale < 0) {
+        if ($scale === null) {
+            $this->scale = strlen($this->fractionalPart);
+
+            return;
+        }
+        if ($scale < 0) {
             throw new InvalidArgumentException('Scale must be >= 0.');
         }
 
-        $calculatedScale = strlen($this->fractionalPart);
-        if ($scale !== null && $calculatedScale > $scale) {
-            if ($strict) {
-                throw new InvalidArgumentException('Loss of precision detected. Detected scale `' . $calculatedScale . '` > `' . $scale . '` as defined.');
-            }
-
-            $this->fractionalPart = substr($this->fractionalPart, 0, $scale);
+        if (trim(substr($this->fractionalPart, $scale), '0') !== '') {
+            throw new RoundingNecessaryException(
+                'The value has more than `' . $scale . '` decimals. Round it first, for example with withScale().',
+            );
         }
 
-        $this->scale = $scale ?? $calculatedScale;
+        $this->fractionalPart = str_pad(substr($this->fractionalPart, 0, $scale), $scale, '0');
+        $this->scale = $scale;
     }
 
     /**

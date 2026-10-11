@@ -9,6 +9,7 @@
 
     <file>src/</file>
     <file>tests/</file>
+    <exclude-pattern>tests/stubs/</exclude-pattern>
 
     <rule ref="vendor/php-collective/code-sniffer/PhpCollectiveStrict/ruleset.xml"/>
 

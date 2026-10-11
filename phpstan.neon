@@ -2,6 +2,8 @@ parameters:
     level: 8
     paths:
         - src/
+    scanFiles:
+        - tests/stubs/RoundingMode.php
     ignoreErrors:
         - identifier: missingType.iterableValue
         - '#Unsafe usage of new static\(\).#'
