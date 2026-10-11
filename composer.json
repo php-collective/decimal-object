@@ -3,6 +3,14 @@
     "description": "PHP decimal handling as value object",
     "license": "MIT",
     "type": "library",
+    "keywords": [
+        "decimal",
+        "value-object",
+        "bcmath",
+        "precision",
+        "arbitrary-precision",
+        "math"
+    ],
     "authors": [
         {
             "name": "The PHP Collective",
@@ -13,15 +21,19 @@
             "homepage": "https://spryker.com"
         }
     ],
+    "support": {
+        "issues": "https://github.com/php-collective/decimal-object/issues",
+        "source": "https://github.com/php-collective/decimal-object"
+    },
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.2",
         "ext-bcmath": "*",
         "ext-json": "*"
     },
     "require-dev": {
-        "php-collective/code-sniffer": "^0.2.1",
+        "php-collective/code-sniffer": "^0.6.8",
         "phpstan/phpstan": "^2.0.0",
-        "phpunit/phpunit": "^10.5.45 || ^11.0.0 || ^12.0.0 || ^13.0.0"
+        "phpunit/phpunit": "^11.5.0 || ^12.0.0 || ^13.0.0"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
