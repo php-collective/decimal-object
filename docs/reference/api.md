@@ -11,6 +11,8 @@ Class `PhpCollective\DecimalObject\Decimal`, implementing `JsonSerializable` and
 | `new Decimal($value, ?int $scale = null, bool $strict = false)` | Creates a decimal. Also accepts any `Stringable` with a numeric string. |
 | `Decimal::create($value, ?int $scale = null, bool $strict = false): static` | Same as the constructor, for chaining. |
 | `Decimal::tryCreate($value, ?int $scale = null): ?static` | Returns `null` for `null` and for input that is not numeric. |
+| `Decimal::createFromFloat(float $value): static` | Keeps all digits of the float, independent of the `precision` ini setting. |
+| `Decimal::zero(): static`, `Decimal::one(): static` | The values `0` and `1`. |
 
 See [Creating decimals](../guide/creating).
 
@@ -21,7 +23,8 @@ See [Creating decimals](../guide/creating).
 | `add($value, ?int $scale = null): static` | Sum | larger of both |
 | `subtract($value, ?int $scale = null): static` | Difference | larger of both |
 | `multiply($value, ?int $scale = null): static` | Product | sum of both |
-| `divide($value, int $scale): static` | Quotient, cut off at `$scale` | required |
+| `divide($value, int $scale, ?int $roundMode = null): static` | Quotient, cut off at `$scale`, or rounded when a mode is given | required |
+| `divideWithRemainder($value): array` | Whole number quotient and remainder | 0, and larger of both |
 | `mod($value, ?int $scale = null): static` | Remainder. `$value` is a `Decimal`, string or integer. | larger of both |
 | `pow($exponent, ?int $scale = null): static` | Power. `$exponent` is a whole number as `Decimal`, string or integer. | scale of the value |
 | `sqrt(?int $scale = null): static` | Square root | scale of the value |
@@ -49,6 +52,7 @@ See [Arithmetic](../guide/arithmetic).
 | --- | --- |
 | `round(int $scale = 0, int $roundMode = Decimal::ROUND_HALF_UP): static` | Rounds to `$scale` decimal places in the given mode. A negative scale rounds to tens, hundreds and so on. |
 | `withScale(int $scale, int $roundMode = Decimal::ROUND_HALF_UP): static` | Pads or rounds to exactly `$scale` decimal places. |
+| `roundToStep($step, int $roundMode = Decimal::ROUND_HALF_UP): static` | Rounds to the nearest multiple of `$step`. |
 | `floor(): static` | Nearest integer towards negative infinity. |
 | `ceil(): static` | Nearest integer towards positive infinity. |
 | `truncate(int $scale = 0): static` | Cuts off digits beyond `$scale`. |
@@ -120,6 +124,7 @@ See [Conversion](../guide/conversion).
 | Unknown mode in `round()` or `withScale()` | `InvalidArgumentException` |
 | Empty list in `average()`, `min()`, `max()`; invalid ratios in `allocate()`; `clamp()` with `$min` above `$max` | `InvalidArgumentException` |
 | Strict mode and the input has more decimals than the scale | `InvalidArgumentException` |
-| `divide()` or `mod()` by zero | `DivisionByZeroError` |
+| `divide()`, `divideWithRemainder()` or `mod()` by zero | `DivisionByZeroError` |
+| Unknown mode in `divide()` or `roundToStep()`; negative scale in `divide()` with a mode; `roundToStep()` with a step of zero or below | `InvalidArgumentException` |
 | `toInt()` or `toFloat()` on a value that does not fit | `TypeError` |
 | `sqrt()` of a negative value, `pow()` with a fractional exponent, negative scale in an arithmetic method | `ValueError` from bcmath |

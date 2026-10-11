@@ -88,6 +88,22 @@ echo Decimal::create('12.3')->truncate(5);   // 12.3
 
 `truncate()` never adds zeros. Use `round()` when the result needs a fixed scale.
 
+## Rounding to a step
+
+`roundToStep()` rounds to the nearest multiple of any positive value, such as five cents for cash payments:
+
+```php
+echo Decimal::create('1.03')->roundToStep('0.05'); // 1.05
+echo Decimal::create('1.02')->roundToStep('0.05'); // 1.00
+echo Decimal::create('7.4')->roundToStep('0.25');  // 7.50
+
+echo Decimal::create('1.01')->roundToStep('0.05', Decimal::ROUND_UP); // 1.05
+```
+
+The result has the scale of the step. A step of zero or below throws an `InvalidArgumentException`.
+
+> [!TIP] Added in 1.4
+
 ## Rounding to tens and hundreds
 
 A negative scale rounds left of the decimal point:

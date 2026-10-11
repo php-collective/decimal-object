@@ -35,11 +35,33 @@ echo Decimal::create('10')->divide('3', 4); // 3.3333
 echo Decimal::create('2')->divide('3', 2);  // 0.66
 ```
 
-The result is cut off at the scale, not rounded. Divide with one more digit and round when you need the nearest value:
+The result is cut off at the scale, not rounded. Pass a rounding mode as third argument to round it:
 
 ```php
-echo Decimal::create('2')->divide('3', 3)->round(2); // 0.67
+echo Decimal::create('2')->divide('3', 2, Decimal::ROUND_HALF_UP);   // 0.67
+echo Decimal::create('1')->divide('8', 2, Decimal::ROUND_HALF_EVEN); // 0.12
 ```
+
+The rounding is decided on the exact quotient. All [rounding modes](./rounding#rounding-modes) work here at the scale, including floor and ceil.
+
+> [!TIP] Added in 1.4
+> The rounding mode argument. Without it `divide()` cuts off as before.
+
+### Quotient and remainder
+
+`divideWithRemainder()` returns the whole number quotient and what is left over:
+
+```php
+[$quotient, $remainder] = Decimal::create('17')->divideWithRemainder(5);
+// 3 and 2
+
+[$quotient, $remainder] = Decimal::create('10')->divideWithRemainder('0.3');
+// 33 and 0.1
+```
+
+The quotient is cut off towards zero, so the remainder has the sign of the value, like `mod()`: `-7` by `2` gives `-3` and `-1`. Quotient times divisor plus remainder always equals the value.
+
+> [!TIP] Added in 1.4
 
 Dividing by zero throws a `DivisionByZeroError`.
 

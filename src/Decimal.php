@@ -217,6 +217,51 @@ class Decimal implements JsonSerializable, Stringable
     }
 
     /**
+     * Creates a decimal from a float with all the digits needed to get the same float back.
+     *
+     * Passing a float to create() goes through PHP's string cast and its `precision`
+     * ini setting, which drops digits beyond the 14th by default.
+     *
+     * @param float $value
+     *
+     * @throws \InvalidArgumentException If the float is INF or NAN.
+     *
+     * @return static
+     */
+    public static function createFromFloat(float $value): static
+    {
+        if (!is_finite($value)) {
+            throw new InvalidArgumentException('Invalid non finite value');
+        }
+
+        $string = '0';
+        foreach ([15, 16, 17] as $digits) {
+            $string = sprintf('%.' . $digits . 'H', $value);
+            if ((float)$string === $value) {
+                break;
+            }
+        }
+
+        return new static(str_replace('.0E', 'E', $string));
+    }
+
+    /**
+     * @return static
+     */
+    public static function zero(): static
+    {
+        return new static('0');
+    }
+
+    /**
+     * @return static
+     */
+    public static function one(): static
+    {
+        return new static('1');
+    }
+
+    /**
      * @param iterable<object|string|float|int> $values
      *
      * @return static
@@ -601,19 +646,118 @@ class Decimal implements JsonSerializable, Stringable
      *
      * @param self|string|float|int $value
      * @param int $scale Decimal places in the result
+     * @param int|null $roundMode One of the ROUND_* constants. Omit to cut off after $scale places.
      *
      * @throws \DivisionByZeroError if $value is zero.
+     * @throws \InvalidArgumentException
      *
      * @return static
      */
-    public function divide(self|string|float|int $value, int $scale): static
+    public function divide(self|string|float|int $value, int $scale, ?int $roundMode = null): static
+    {
+        $decimal = static::create($value);
+        if ($decimal->isZero()) {
+            throw new DivisionByZeroError('Cannot divide by zero. Only Chuck Norris can!');
+        }
+        if ($roundMode === null) {
+            return new static(bcdiv((string)$this, (string)$decimal, $scale));
+        }
+        if ($scale < 0) {
+            throw new InvalidArgumentException('Scale must be >= 0.');
+        }
+
+        return new static($this->roundedQuotient($decimal, $scale, $roundMode), $scale);
+    }
+
+    /**
+     * Whole number quotient and what is left over: quotient * $value + remainder equals this value.
+     *
+     * The quotient is cut off towards zero, so the remainder has the sign of this value, like mod().
+     *
+     * @param self|string|float|int $value
+     *
+     * @throws \DivisionByZeroError if $value is zero.
+     *
+     * @return array{0: static, 1: static} Quotient and remainder
+     */
+    public function divideWithRemainder(self|string|float|int $value): array
     {
         $decimal = static::create($value);
         if ($decimal->isZero()) {
             throw new DivisionByZeroError('Cannot divide by zero. Only Chuck Norris can!');
         }
 
-        return new static(bcdiv((string)$this, (string)$decimal, $scale));
+        $scale = max($this->fractionalLength(), $decimal->fractionalLength());
+        $quotient = bcdiv((string)$this, (string)$decimal, 0);
+        $remainder = bcsub((string)$this, bcmul($quotient, (string)$decimal, $scale), $scale);
+
+        return [new static($quotient), new static($remainder)];
+    }
+
+    /**
+     * Rounds to the nearest multiple of $step, for example 0.05 for cash amounts.
+     *
+     * @param self|string|float|int $step Greater than zero
+     * @param int $roundMode One of the ROUND_* constants
+     *
+     * @throws \InvalidArgumentException
+     *
+     * @return static
+     */
+    public function roundToStep(self|string|float|int $step, int $roundMode = self::ROUND_HALF_UP): static
+    {
+        $step = static::create($step);
+        if (!$step->isPositive()) {
+            throw new InvalidArgumentException('Step must be greater than zero.');
+        }
+
+        $steps = $this->roundedQuotient($step, 0, $roundMode);
+        $scale = $step->fractionalLength();
+
+        return new static(bcmul($steps, (string)$step, $scale), $scale);
+    }
+
+    /**
+     * @param self $divisor Not zero
+     * @param int $scale
+     * @param int $roundMode
+     *
+     * @throws \InvalidArgumentException
+     *
+     * @return string This value divided by $divisor, rounded to $scale decimal places.
+     */
+    protected function roundedQuotient(self $divisor, int $scale, int $roundMode): string
+    {
+        if (!in_array($roundMode, static::roundModes(), true)) {
+            throw new InvalidArgumentException('Unsupported round mode `' . $roundMode . '`.');
+        }
+
+        // Work on whole numbers so the remainder tells exactly whether and how to round.
+        $places = max($this->fractionalLength(), $divisor->fractionalLength());
+        $numerator = $this->shift($places)->integralPart . str_repeat('0', $scale);
+        $denominator = $divisor->shift($places)->integralPart;
+
+        $quotient = bcdiv($numerator, $denominator, 0);
+        $remainder = bcsub($numerator, bcmul($quotient, $denominator, 0), 0);
+
+        $exact = $remainder === '0';
+        $half = $exact ? -1 : bccomp(bcmul($remainder, '2', 0), $denominator, 0);
+        $odd = (int)substr($quotient, -1) % 2 === 1;
+        $negative = $this->negative !== $divisor->negative;
+
+        if (static::roundsAwayFromZero($roundMode, $negative, $exact, $half, $odd)) {
+            $quotient = bcadd($quotient, '1', 0);
+        }
+
+        return (string)(new static(($negative ? '-' : '') . $quotient))->shift(-$scale);
+    }
+
+    /**
+     * @return int Number of decimals actually stored, which a larger declared scale does not pad.
+     */
+    protected function fractionalLength(): int
+    {
+        return strlen($this->fractionalPart);
     }
 
     /**
@@ -767,9 +911,27 @@ class Decimal implements JsonSerializable, Stringable
         $half = $exact ? -1 : bccomp('0.' . $fractionalPart, '0.5', strlen($fractionalPart));
         $odd = (int)substr($integralPart, -1) % 2 === 1;
 
-        $awayFromZero = match ($roundMode) {
-            static::ROUND_FLOOR => !$exact && $this->negative,
-            static::ROUND_CEIL => !$exact && !$this->negative,
+        if (static::roundsAwayFromZero($roundMode, $this->negative, $exact, $half, $odd)) {
+            $integralPart = bcadd($integralPart, '1', 0);
+        }
+
+        return (string)(new static(($this->negative ? '-' : '') . $integralPart))->shift(-$scale);
+    }
+
+    /**
+     * @param int $roundMode
+     * @param bool $negative
+     * @param bool $exact If there is nothing to round.
+     * @param int $half -1, 0 or 1 for a rest below, at or above the half way point
+     * @param bool $odd If the last kept digit is odd.
+     *
+     * @return bool If the last kept digit has to move one step away from zero.
+     */
+    protected static function roundsAwayFromZero(int $roundMode, bool $negative, bool $exact, int $half, bool $odd): bool
+    {
+        return match ($roundMode) {
+            static::ROUND_FLOOR => !$exact && $negative,
+            static::ROUND_CEIL => !$exact && !$negative,
             static::ROUND_UP => !$exact,
             static::ROUND_DOWN => false,
             static::ROUND_HALF_DOWN => $half > 0,
@@ -777,11 +939,6 @@ class Decimal implements JsonSerializable, Stringable
             static::ROUND_HALF_ODD => $half > 0 || ($half === 0 && !$odd),
             default => $half >= 0,
         };
-        if ($awayFromZero) {
-            $integralPart = bcadd($integralPart, '1', 0);
-        }
-
-        return (string)(new static(($this->negative ? '-' : '') . $integralPart))->shift(-$scale);
     }
 
     /**
@@ -817,7 +974,7 @@ class Decimal implements JsonSerializable, Stringable
             throw new InvalidArgumentException('Ratios must add up to more than zero.');
         }
 
-        $scale = $this->scale();
+        $scale = max($this->scale(), $this->fractionalLength());
         $units = $this->absolute()->shift($scale)->integralPart;
 
         $shares = [];
