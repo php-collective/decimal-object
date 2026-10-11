@@ -467,15 +467,16 @@ class Decimal implements JsonSerializable, Stringable
      */
     public function mod(self|string|int $value, ?int $scale = null): static
     {
-        $decimal = static::create($value);
-        $scale = $this->resultScale($this, $decimal, $scale);
+        if ($scale === null) {
+            $scale = $this->scale();
+        }
 
-        return new static(bcmod((string)$this, (string)$decimal, $scale));
+        return new static(bcmod((string)$this, (string)static::create($value), $scale));
     }
 
     /**
-     * @param int $scale Decimal places in the result
-     * @param int $roundMode One of the ROUND_* constants of this class
+     * @param int $scale Decimal places in the result (only used with mode "half up")
+     * @param int $roundMode ROUND_HALF_UP, ROUND_CEIL or ROUND_FLOOR. Anything else rounds half up.
      *
      * @throws \InvalidArgumentException
      *
@@ -486,25 +487,24 @@ class Decimal implements JsonSerializable, Stringable
         if ($scale < 0) {
             throw new InvalidArgumentException('Scale must be >= 0.');
         }
-        if (!in_array($roundMode, [static::ROUND_HALF_UP, static::ROUND_CEIL, static::ROUND_FLOOR], true)) {
-            throw new InvalidArgumentException('Unsupported round mode `' . $roundMode . '`.');
-        }
+
+        // Floor and ceil always round to a whole number in 1.x, the scale only labels the result.
+        $directed = in_array($roundMode, [static::ROUND_FLOOR, static::ROUND_CEIL], true);
+        $places = $directed ? 0 : $scale;
 
         $value = (string)$this;
-        $truncated = bcadd($value, '0', $scale);
+        $truncated = bcadd($value, '0', $places);
         if (bccomp($value, $truncated, $this->scale()) === 0) {
             return new static($truncated, $scale);
         }
 
-        $unit = $scale > 0 ? '0.' . str_repeat('0', $scale - 1) . '1' : '1';
-
         switch ($roundMode) {
             case static::ROUND_FLOOR:
-                $result = $this->isNegative() ? bcsub($truncated, $unit, $scale) : $truncated;
+                $result = $this->isNegative() ? bcsub($truncated, '1', 0) : $truncated;
 
                 break;
             case static::ROUND_CEIL:
-                $result = $this->isNegative() ? $truncated : bcadd($truncated, $unit, $scale);
+                $result = $this->isNegative() ? $truncated : bcadd($truncated, '1', 0);
 
                 break;
             default:
@@ -848,8 +848,9 @@ class Decimal implements JsonSerializable, Stringable
             throw new InvalidArgumentException('Scale must be >= 0.');
         }
 
+        // A scale of 0 is treated like no scale in 1.x and does not cut off decimals.
         $calculatedScale = strlen($this->fractionalPart);
-        if ($scale !== null && $calculatedScale > $scale) {
+        if ($scale && $calculatedScale > $scale) {
             if ($strict) {
                 throw new InvalidArgumentException('Loss of precision detected. Detected scale `' . $calculatedScale . '` > `' . $scale . '` as defined.');
             }

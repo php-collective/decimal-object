@@ -1123,27 +1123,6 @@ class DecimalTest extends TestCase
     /**
      * @return void
      */
-    public function testNewObjectZeroScale(): void
-    {
-        $decimal = new Decimal('1.56', 0);
-        $this->assertSame('1', (string)$decimal);
-        $this->assertSame(0, $decimal->scale());
-    }
-
-    /**
-     * @return void
-     */
-    public function testNewObjectZeroScaleStrict(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Loss of precision detected');
-
-        new Decimal('1.56', 0, true);
-    }
-
-    /**
-     * @return void
-     */
     public function testNewObjectNegativeScale(): void
     {
         $this->expectException(InvalidArgumentException::class);
@@ -1201,19 +1180,13 @@ class DecimalTest extends TestCase
             'floor negative whole' => ['-1.0', 0, Decimal::ROUND_FLOOR, '-1'],
             'floor positive whole' => ['1.00', 0, Decimal::ROUND_FLOOR, '1'],
             'floor negative' => ['-1.5', 0, Decimal::ROUND_FLOOR, '-2'],
-            'floor scale' => ['1.25', 1, Decimal::ROUND_FLOOR, '1.2'],
-            'floor negative scale' => ['-1.21', 1, Decimal::ROUND_FLOOR, '-1.3'],
-            'floor exact scale' => ['-1.20', 1, Decimal::ROUND_FLOOR, '-1.2'],
-            'floor higher scale' => ['1.5', 3, Decimal::ROUND_FLOOR, '1.500'],
-            'floor small negative' => ['-0.001', 2, Decimal::ROUND_FLOOR, '-0.01'],
             'ceil positive whole' => ['1.0', 0, Decimal::ROUND_CEIL, '1'],
             'ceil negative whole' => ['-1.00', 0, Decimal::ROUND_CEIL, '-1'],
             'ceil positive' => ['1.5', 0, Decimal::ROUND_CEIL, '2'],
-            'ceil scale' => ['1.21', 1, Decimal::ROUND_CEIL, '1.3'],
-            'ceil negative scale' => ['-1.29', 1, Decimal::ROUND_CEIL, '-1.2'],
-            'ceil exact scale' => ['1.20', 1, Decimal::ROUND_CEIL, '1.2'],
-            'ceil small negative' => ['-0.001', 2, Decimal::ROUND_CEIL, '0.00'],
-            'ceil small positive' => ['0.001', 2, Decimal::ROUND_CEIL, '0.01'],
+            'floor small negative' => ['-0.001', 0, Decimal::ROUND_FLOOR, '-1'],
+            'floor zero with decimals' => ['0.00', 0, Decimal::ROUND_FLOOR, '0'],
+            'ceil small positive' => ['0.001', 0, Decimal::ROUND_CEIL, '1'],
+            'ceil zero with decimals' => ['0.00', 0, Decimal::ROUND_CEIL, '0'],
             'half up negative' => ['-1.005', 2, Decimal::ROUND_HALF_UP, '-1.01'],
             'half up to zero' => ['-0.004', 2, Decimal::ROUND_HALF_UP, '0.00'],
         ];
@@ -1227,30 +1200,6 @@ class DecimalTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         (new Decimal('15'))->round(-1);
-    }
-
-    /**
-     * @param string $value
-     *
-     * @return void
-     */
-    #[DataProvider('roundInvalidModeProvider')]
-    public function testRoundInvalidMode(string $value): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        (new Decimal($value))->round(0, PHP_ROUND_HALF_EVEN);
-    }
-
-    /**
-     * @return array
-     */
-    public static function roundInvalidModeProvider(): array
-    {
-        return [
-            'needs rounding' => ['1.5'],
-            'exact' => ['1.0'],
-        ];
     }
 
     /**
@@ -1309,9 +1258,8 @@ class DecimalTest extends TestCase
 
         $this->assertSame('0', (string)$decimal->mod('1e1'));
         $this->assertSame('1', (string)$decimal->mod(new Decimal('3')));
-        $this->assertSame('0.1', (string)$decimal->mod('0.3'));
+        $this->assertSame('0.1', (string)$decimal->mod('0.3', 1));
         $this->assertSame('1.5', (string)(new Decimal('10.5'))->mod('3'));
-        $this->assertSame('0', (string)$decimal->mod('0.3', 0));
     }
 
     /**
