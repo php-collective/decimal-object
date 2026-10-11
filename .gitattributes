@@ -16,6 +16,7 @@ phpstan.neon export-ignore
 phpunit.xml.dist export-ignore
 compose.yaml export-ignore
 Makefile export-ignore
+renovate.json export-ignore
 
 # Remove directories for archives
 .docker/ export-ignore
